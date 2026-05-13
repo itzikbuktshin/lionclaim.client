@@ -7,6 +7,7 @@ import StepIndicator from "@/components/chat/StepIndicator";
 import ResultCard from "@/components/chat/ResultCard";
 import TypingIndicator from "@/components/chat/TypingIndicator";
 import { calculateCompensation, calculateDecline, getDamageCoefficient, formatCurrency } from "@/lib/compensationCalc";
+import { base44 } from "@/api/base44Client";
 
 const INITIAL_MESSAGE = "שלום! 👋\nאני הסוכן לבדיקת זכאות לפיצויים עקיפים במסלול \"שאגת הארי\".\nאעזור לך לבדוק אם העסק שלך זכאי לפיצוי ומה הסכום המשוער.\n\nנתחיל?";
 
@@ -154,11 +155,24 @@ export default function Home() {
         setMessages(prev => [...prev, { text: `${formatCurrency(num)} ₪`, isAgent: false }]);
         setIsTyping(true);
 
-        setTimeout(() => {
+        setTimeout(async () => {
           setIsTyping(false);
           setMessages(prev => [...prev, 
             { text: "מחשב את הזכאות שלך... 📊", isAgent: true }
           ]);
+
+          // Save to DB
+          base44.entities.EligibilityCheck.create({
+            business_type: updatedData.businessType,
+            annual_revenue: updatedData.annualRevenue,
+            base_revenue: updatedData.baseRevenue,
+            compensation_revenue: num,
+            decline_percent: declinePercent,
+            damage_coefficient: coefficient,
+            eligible: compensation.eligible,
+            compensation_amount: compensation.amount,
+            compensation_tier: compensation.tier || null,
+          });
 
           setTimeout(() => {
             setResult(resultData);
