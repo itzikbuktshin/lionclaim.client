@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Shield, RotateCcw } from "lucide-react";
+import { Shield, RotateCcw, X, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChatMessage from "@/components/chat/ChatMessage";
 import ChatInput from "@/components/chat/ChatInput";
@@ -16,6 +16,7 @@ export default function Home() {
     { text: INITIAL_MESSAGE, isAgent: true }
   ]);
   const [step, setStep] = useState("welcome");
+  const [showPrivacyBanner, setShowPrivacyBanner] = useState(true);
   const [stepIndex, setStepIndex] = useState(0);
   const [data, setData] = useState({});
   const [isTyping, setIsTyping] = useState(false);
@@ -252,6 +253,25 @@ export default function Home() {
           )}
         </div>
       </header>
+
+      {/* Privacy Banner */}
+      {showPrivacyBanner && (
+        <div className="bg-accent border-b border-border">
+          <div className="max-w-2xl mx-auto px-4 py-2 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Info className="w-3.5 h-3.5 flex-shrink-0 text-primary/60" />
+              <span>החישובים בלבד נשמרים לצורך מחקר — ללא פרטים מזהים</span>
+            </div>
+            <button
+              onClick={() => setShowPrivacyBanner(false)}
+              className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+              aria-label="סגור"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Step Indicator */}
       <div className="bg-card border-b border-border">
