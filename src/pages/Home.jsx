@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Shield, RotateCcw, X, Info } from "lucide-react";
+import { Shield, RotateCcw, X, Info, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChatMessage from "@/components/chat/ChatMessage";
 import ChatInput from "@/components/chat/ChatInput";
@@ -21,6 +21,8 @@ export default function Home() {
   const [data, setData] = useState({});
   const [isTyping, setIsTyping] = useState(false);
   const [result, setResult] = useState(null);
+  const [savedCheckId, setSavedCheckId] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -173,6 +175,8 @@ export default function Home() {
             eligible: compensation.eligible,
             compensation_amount: compensation.amount,
             compensation_tier: compensation.tier || null,
+          }).then(record => {
+            if (record?.id) setSavedCheckId(record.id);
           });
 
           setTimeout(() => {
@@ -195,7 +199,16 @@ export default function Home() {
     setStepIndex(0);
     setData({});
     setResult(null);
+    setSavedCheckId(null);
+    setDeleteConfirm(false);
     setIsTyping(false);
+  };
+
+  const handleDeleteRecord = async () => {
+    if (!savedCheckId) return;
+    await base44.entities.EligibilityCheck.delete(savedCheckId);
+    setSavedCheckId(null);
+    setDeleteConfirm(false);
   };
 
   const getInputConfig = () => {
@@ -312,11 +325,37 @@ export default function Home() {
 
         {/* Reset after result */}
         {result && (
-          <div className="p-4 border-t border-border flex justify-center">
+          <div className="p-4 border-t border-border flex items-center justify-between">
+            <div className="flex-1" />
             <Button onClick={handleReset} variant="outline" className="rounded-full gap-2">
               <RotateCcw className="w-4 h-4" />
               התחל מחדש
             </Button>
+            {savedCheckId && (
+              <div className="flex-1 flex justify-end">
+                {deleteConfirm ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">למחוק את הנתונים?</span>
+                    <button
+                      onClick={handleDeleteRecord}
+                      className="text-xs text-destructive hover:underline"
+                    >כן</button>
+                    <button
+                      onClick={() => setDeleteConfirm(false)}
+                      className="text-xs text-muted-foreground hover:underline"
+                    >ביטול</button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setDeleteConfirm(true)}
+                    className="text-muted-foreground/40 hover:text-muted-foreground transition-colors p-1"
+                    title="מחק את הנתונים שנשמרו"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
