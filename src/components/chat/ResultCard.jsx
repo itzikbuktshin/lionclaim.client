@@ -1,14 +1,14 @@
 import React, { useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { 
-  CheckCircle, XCircle, TrendingDown, Calculator, 
-  FileText, AlertTriangle, Award, Download, Loader2, DollarSign
+import {
+  CheckCircle, XCircle, TrendingDown, Calculator,
+  FileText, AlertTriangle, Award, Download, Loader2, DollarSign, Info
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, getDeclineRangeLabel, getFixedCostsCoefficient, getDamageCoefficient } from "@/lib/compensationCalc";
+import { formatCurrency, getDeclineRangeLabel, getFixedCostsCoefficient } from "@/lib/compensationCalc";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
@@ -26,46 +26,46 @@ function ResultRow({ icon: Icon, label, value, highlight }) {
   );
 }
 
+const requiredDocs = [
+  "דוחות מע\"מ לתקופת הבסיס (מרץ-אפריל 2025)",
+  "דוחות מע\"מ לתקופת הפיצוי (מרץ-אפריל 2026)",
+  "דוחות שכר לשנת 2025",
+  "אישור ניהול חשבון בנק",
+  "צילום תעודת זהות של בעל העסק",
+  "אישור רואה חשבון / יועץ מס",
+];
+
 export default function ResultCard({ result }) {
-  const { eligible, declinePercent, fixedCostsAmount, salaryAmount, totalAmount, annualRevenue, businessType, isMidRange, baseAmount, damageCoefficient, cap } = result;
+  const {
+    eligible, declinePercent, businessCategory,
+    expenseComponent, expenseCoefficient, salaryComponent,
+    subtotalBeforeCap, monthlyCapApplied, compensationAmount,
+    additionalDirectDamage, finalCompensation,
+    baseAmount, damageCoefficient,
+    notes = [],
+  } = result;
+
   const [exporting, setExporting] = useState(false);
   const cardRef = useRef(null);
-  const coefficient = getFixedCostsCoefficient(declinePercent);
 
   const handleExportPDF = async () => {
     if (!cardRef.current) return;
     setExporting(true);
     try {
       const canvas = await html2canvas(cardRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        logging: false,
+        scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false,
       });
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pageW = 210;
-      const pageH = 297;
-      const margin = 10;
-      const maxW = pageW - margin * 2;
-      const imgW = maxW;
-      const imgH = (canvas.height * imgW) / canvas.width;
+      const pageW = 210, pageH = 297, margin = 10, maxW = pageW - margin * 2;
+      const imgH = (canvas.height * maxW) / canvas.width;
       const yPos = imgH < pageH - margin * 2 ? (pageH - imgH) / 2 : margin;
-      pdf.addImage(imgData, "PNG", margin, yPos, imgW, imgH);
-      pdf.save(`שאגת-הארי-בדיקת-זכאות-${new Date().toLocaleDateString("he-IL").replace(/\//g, "-")}.pdf`);
+      pdf.addImage(imgData, "PNG", margin, yPos, maxW, imgH);
+      pdf.save(`שאגת-הארי-${new Date().toLocaleDateString("he-IL").replace(/\//g, "-")}.pdf`);
     } finally {
       setExporting(false);
     }
   };
-
-  const requiredDocs = [
-    "דוחות מע\"מ לתקופת הבסיס (מרץ-אפריל 2025)",
-    "דוחות מע\"מ לתקופת הפיצוי (מרץ-אפריל 2026)",
-    "דוחות שכר לשנת 2025",
-    "אישור ניהול חשבון בנק",
-    "צילום תעודת זהות של בעל העסק",
-    "אישור רואה חשבון / יועץ מס"
-  ];
 
   return (
     <motion.div
@@ -75,89 +75,93 @@ export default function ResultCard({ result }) {
       dir="rtl"
     >
       <Card ref={cardRef} className="overflow-hidden border-0 shadow-xl">
+        {/* Header */}
         <div className={`px-6 py-5 ${eligible ? "bg-primary" : "bg-destructive"} text-primary-foreground`}>
           <div className="flex items-center justify-between">
             <div>
-              {eligible ? (
-                <Badge className="bg-secondary text-secondary-foreground text-xs font-bold mb-2">זכאי לפיצוי</Badge>
-              ) : (
-                <Badge variant="outline" className="border-primary-foreground/30 text-primary-foreground text-xs font-bold mb-2">לא זכאי</Badge>
-              )}
-              <h3 className="text-xl font-bold">
-                {eligible ? "נמצאה זכאות לפיצוי" : "לא נמצאה זכאות"}
-              </h3>
+              <Badge className={eligible ? "bg-secondary text-secondary-foreground text-xs font-bold mb-2" : "border border-primary-foreground/30 text-primary-foreground text-xs font-bold mb-2"}>
+                {eligible ? "זכאי לפיצוי" : "לא זכאי"}
+              </Badge>
+              <h3 className="text-xl font-bold">{eligible ? "נמצאה זכאות לפיצוי" : "לא נמצאה זכאות"}</h3>
               <p className="text-sm opacity-80 mt-1">מסלול שאגת הארי — פיצויים עקיפים</p>
             </div>
-            {eligible ? (
-              <Award className="w-12 h-12 opacity-60" />
-            ) : (
-              <XCircle className="w-12 h-12 opacity-60" />
-            )}
+            {eligible ? <Award className="w-12 h-12 opacity-60" /> : <XCircle className="w-12 h-12 opacity-60" />}
           </div>
         </div>
 
         <CardContent className="p-6 space-y-4">
+          {/* Common rows */}
           <div className="space-y-1">
-            <ResultRow icon={FileText} label="סוג עסק" value={businessType} />
-            <Separator />
-            <ResultRow icon={Calculator} label="מחזור שנתי (2025)" value={`${formatCurrency(annualRevenue)} ₪`} />
-            <Separator />
             <ResultRow icon={TrendingDown} label="ירידת הכנסות" value={`${declinePercent}%`} />
             <Separator />
+            <ResultRow icon={AlertTriangle} label="טווח נזק" value={getDeclineRangeLabel(declinePercent)} />
+            <Separator />
 
-            {eligible && !isMidRange && (
-              <>
-                <ResultRow icon={AlertTriangle} label="טווח נזק" value={getDeclineRangeLabel(declinePercent)} />
-                <Separator />
-                <ResultRow icon={Calculator} label="מקדם הוצאות קבועות" value={`${(coefficient * 100).toFixed(0)}%`} />
-                <Separator />
-                <ResultRow icon={Calculator} label="רכיב הוצאות קבועות" value={`${formatCurrency(fixedCostsAmount)} ₪`} />
-                <Separator />
-                <ResultRow icon={DollarSign} label="רכיב שכר" value={`${formatCurrency(salaryAmount)} ₪`} />
-                <Separator />
-                {cap && (fixedCostsAmount + salaryAmount) > cap && (
-                  <>
-                    <ResultRow icon={AlertTriangle} label="תקרה חודשית" value={`${formatCurrency(cap)} ₪`} />
-                    <Separator />
-                  </>
-                )}
-                <ResultRow
-                  icon={CheckCircle}
-                  label="סך פיצוי חודשי משוער"
-                  value={`${formatCurrency(totalAmount)} ₪`}
-                  highlight
-                />
-              </>
+            {/* Not eligible */}
+            {!eligible && (
+              <div className="bg-destructive/10 rounded-lg p-4 text-sm text-center mt-2">
+                <p className="font-medium text-destructive">
+                  {notes[0] || `שיעור ירידת ההכנסות (${declinePercent}%) נמוך מ-25% — הסף המינימלי לזכאות.`}
+                </p>
+              </div>
             )}
 
-            {eligible && isMidRange && (
+            {/* Small business */}
+            {eligible && businessCategory === "small" && (
               <>
-                <ResultRow icon={AlertTriangle} label="טווח נזק" value={getDeclineRangeLabel(declinePercent)} />
-                <Separator />
                 <ResultRow icon={Calculator} label="פיצוי בסיס (לפי מחזור)" value={`${formatCurrency(baseAmount)} ₪`} />
                 <Separator />
                 <ResultRow icon={Calculator} label="מקדם נזק" value={`×${damageCoefficient}`} />
                 <Separator />
-                <ResultRow
-                  icon={CheckCircle}
-                  label="סך פיצוי חודשי משוער"
-                  value={`${formatCurrency(totalAmount)} ₪`}
-                  highlight
-                />
+                <ResultRow icon={CheckCircle} label="סך פיצוי חודשי משוער" value={`${formatCurrency(finalCompensation)} ₪`} highlight />
               </>
             )}
 
-            {!eligible && (
-              <div className="bg-destructive/10 rounded-lg p-4 text-sm text-center">
-                <p className="font-medium text-destructive">
-                  שיעור ירידת ההכנסות ({declinePercent}%) נמוך מ-25% — הסף המינימלי לזכאות.
-                </p>
-              </div>
+            {/* Large business */}
+            {eligible && businessCategory === "large" && (
+              <>
+                <ResultRow icon={Calculator} label="מקדם הוצאות קבועות" value={`${((expenseCoefficient || 0) * 100).toFixed(0)}%`} />
+                <Separator />
+                <ResultRow icon={Calculator} label="רכיב תשומות" value={`${formatCurrency(expenseComponent)} ₪`} />
+                <Separator />
+                <ResultRow icon={DollarSign} label="רכיב שכר" value={`${formatCurrency(salaryComponent)} ₪`} />
+                <Separator />
+                <ResultRow icon={Calculator} label="סכום לפני תקרה" value={`${formatCurrency(subtotalBeforeCap)} ₪`} />
+                <Separator />
+                {subtotalBeforeCap > monthlyCapApplied && (
+                  <>
+                    <ResultRow icon={AlertTriangle} label="תקרה חודשית" value={`${formatCurrency(monthlyCapApplied)} ₪`} />
+                    <Separator />
+                  </>
+                )}
+                <ResultRow icon={CheckCircle} label="פיצוי חודשי (לפני נזק ישיר)" value={`${formatCurrency(compensationAmount)} ₪`} />
+                {additionalDirectDamage > 0 && (
+                  <>
+                    <Separator />
+                    <ResultRow icon={DollarSign} label="תוספת נזק ישיר" value={`${formatCurrency(additionalDirectDamage)} ₪`} />
+                  </>
+                )}
+                <Separator />
+                <ResultRow icon={CheckCircle} label="סך פיצוי חודשי משוער" value={`${formatCurrency(finalCompensation)} ₪`} highlight />
+              </>
             )}
           </div>
 
+          {/* Notes */}
+          {notes.length > 0 && (
+            <div className="bg-accent rounded-lg p-3 space-y-1">
+              {notes.map((note, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-primary/60" />
+                  <span>{note}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Required docs */}
           {eligible && (
-            <div className="mt-6">
+            <div className="mt-4">
               <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
                 <FileText className="w-4 h-4 text-primary" />
                 מסמכים נדרשים להגשת התביעה
@@ -182,11 +186,7 @@ export default function ResultCard({ result }) {
         disabled={exporting}
         className="w-full mt-3 rounded-xl gap-2 bg-primary hover:bg-primary/90"
       >
-        {exporting ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <Download className="w-4 h-4" />
-        )}
+        {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
         ייצוא דוח PDF
       </Button>
     </motion.div>

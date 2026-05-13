@@ -6,19 +6,35 @@ import ChatInput from "@/components/chat/ChatInput";
 import StepIndicator from "@/components/chat/StepIndicator";
 import ResultCard from "@/components/chat/ResultCard";
 import TypingIndicator from "@/components/chat/TypingIndicator";
-import { calculateCompensation, calculateMidRangeCompensation, calculateDecline, formatCurrency, STEPS_FULL, STEPS_MID, STEPS_SHORT, MIN_ANNUAL_REVENUE, MID_RANGE_THRESHOLD } from "@/lib/compensationCalc";
+import {
+  calculateFullCompensation, calculateDecline,
+  formatCurrency, STEPS_FULL, STEPS_MID, STEPS_SHORT,
+  MIN_ANNUAL_REVENUE, MID_RANGE_THRESHOLD
+} from "@/lib/compensationCalc";
 import { base44 } from "@/api/base44Client";
 
 const INITIAL_MESSAGE = "שלום! 👋\nאני הסוכן לבדיקת זכאות לפיצויים עקיפים במסלול \"שאגת הארי\".\nאעזור לך לבדוק אם העסק שלך זכאי לפיצוי ומה הסכום החודשי המשוער.\n\nנתחיל?";
 
+// Steps for large business (now includes direct-damage question)
+const STEPS_LARGE = [
+  { id: "welcome",              label: "פתיחה" },
+  { id: "business_active",      label: "סטטוס עסק" },
+  { id: "business_type",        label: "סוג עסק" },
+  { id: "annual_revenue",       label: "מחזור שנתי" },
+  { id: "base_revenue",         label: "הכנסות בסיס" },
+  { id: "compensation_revenue", label: "הכנסות פיצוי" },
+  { id: "monthly_expenses",     label: "הוצאות חודשיות" },
+  { id: "monthly_salary",       label: "עלות שכר" },
+  { id: "direct_damage",        label: "נזק ישיר" },
+  { id: "result",               label: "תוצאה" },
+];
+
 export default function Home() {
-  const [messages, setMessages] = useState([
-    { text: INITIAL_MESSAGE, isAgent: true }
-  ]);
+  const [messages, setMessages] = useState([{ text: INITIAL_MESSAGE, isAgent: true }]);
   const [step, setStep] = useState("welcome");
   const [showPrivacyBanner, setShowPrivacyBanner] = useState(true);
   const [stepIndex, setStepIndex] = useState(0);
-  const [activeSteps, setActiveSteps] = useState(STEPS_FULL);
+  const [activeSteps, setActiveSteps] = useState(STEPS_LARGE);
   const [data, setData] = useState({});
   const [isTyping, setIsTyping] = useState(false);
   const [result, setResult] = useState(null);
@@ -35,7 +51,6 @@ export default function Home() {
   const addMessages = useCallback((userMsg, agentMsg, nextStep, nextStepIndex, newData) => {
     setMessages(prev => [...prev, { text: userMsg, isAgent: false }]);
     setIsTyping(true);
-
     setTimeout(() => {
       setIsTyping(false);
       setMessages(prev => [...prev, { text: agentMsg, isAgent: true }]);
@@ -45,28 +60,53 @@ export default function Home() {
     }, 600);
   }, []);
 
+  const finishAndCalc = useCallback((finalData) => {
+    const calc = calculateFullCompensation({
+      businessType: finalData.businessType,
+      annualRevenue2025: finalData.annualRevenue,
+      monthlyExpenses2025: finalData.monthlyExpenses,
+      revenueMarchApril2025: finalData.baseRevenue,
+      revenueMarchApril2026: finalData.compensationRevenue,
+      grossSalaryMarch2026: finalData.grossSalary,
+      fixedExpensesActual: finalData.fixedExpensesActual,
+      hasDirectDamage: finalData.hasDirectDamage,
+    });
+
+    setMessages(prev => [...prev, { text: "מחשב את הזכאות שלך... 📊", isAgent: true }]);
+
+    base44.entities.EligibilityCheck.create({
+      business_type: finalData.businessType,
+      annual_revenue: finalData.annualRevenue,
+      base_revenue: finalData.baseRevenue,
+      compensation_revenue: finalData.compensationRevenue,
+      monthly_expenses: finalData.monthlyExpenses,
+      monthly_salary: finalData.grossSalary,
+      decline_percent: calc.declinePercent,
+      eligible: calc.eligible,
+      compensation_amount: calc.finalCompensation || calc.compensationAmount || 0,
+    }).then(record => { if (record?.id) setSavedCheckId(record.id); });
+
+    setTimeout(() => {
+      setResult(calc);
+      setStep("result");
+      setStepIndex(STEPS_LARGE.length - 1);
+    }, 800);
+  }, []);
+
   const handleSend = useCallback((value) => {
     switch (step) {
       case "welcome": {
-        addMessages(
-          "כן, בוא נתחיל",
-          "מצוין! 🏢\nהאם העסק שלך היה פעיל בשנת 2025?",
-          "business_active", 1
-        );
+        addMessages("כן, בוא נתחיל", "מצוין! 🏢\nהאם העסק שלך היה פעיל בשנת 2025?", "business_active", 1);
         break;
       }
 
       case "business_active": {
         if (value === "yes") {
-          addMessages(
-            "כן, העסק היה פעיל",
-            "מה סוג העסק שלך?",
-            "business_type", 2, { businessActive: true }
-          );
+          addMessages("כן, העסק היה פעיל", "מה סוג העסק שלך?", "business_type", 2, { businessActive: true });
         } else {
           addMessages(
             "לא, העסק לא היה פעיל",
-            "לצערי, רק עסקים שהיו פעילים לפני סוף פברואר 2026 זכאים לפיצוי במסלול זה. 😔\nאם יש לך שאלות נוספות, אתה מוזמן להתחיל שיחה חדשה.",
+            "לצערי, רק עסקים שהיו פעילים לפני סוף פברואר 2026 זכאים לפיצוי במסלול זה. 😔",
             "done", 0, { businessActive: false }
           );
         }
@@ -75,11 +115,7 @@ export default function Home() {
 
       case "business_type": {
         if (!value) return;
-        addMessages(
-          value,
-          "מהו המחזור השנתי של העסק בשנת 2025? (בשקלים)\nלדוגמה: 500000",
-          "annual_revenue", 3, { businessType: value }
-        );
+        addMessages(value, "מהו המחזור השנתי של העסק בשנת 2025? (בשקלים)\nלדוגמה: 500000", "annual_revenue", 3, { businessType: value });
         break;
       }
 
@@ -88,44 +124,23 @@ export default function Home() {
         if (isNaN(num) || num <= 0) {
           setMessages(prev => [...prev, { text: value, isAgent: false }]);
           setIsTyping(true);
-          setTimeout(() => {
-            setIsTyping(false);
-            setMessages(prev => [...prev,
-              { text: "אנא הזן מספר תקין (למשל: 500000)", isAgent: true }
-            ]);
-          }, 400);
+          setTimeout(() => { setIsTyping(false); setMessages(prev => [...prev, { text: "אנא הזן מספר תקין (למשל: 500000)", isAgent: true }]); }, 400);
           return;
         }
-
-        // Below 12,000 NIS — ineligible
         if (num < MIN_ANNUAL_REVENUE) {
           setActiveSteps(STEPS_SHORT);
-          addMessages(
-            `${formatCurrency(num)} ₪`,
-            `לצערי, מסלול שאגת הארי מיועד לעסקים עם מחזור שנתי של ${formatCurrency(MIN_ANNUAL_REVENUE)} ₪ ומעלה.\nהמחזור שהזנת (${formatCurrency(num)} ₪) נמוך מהסף הנדרש.\n\nייתכן שישנם מסלולים אחרים המתאימים לעסק שלך — מומלץ לפנות לרשות המיסים.`,
+          addMessages(`${formatCurrency(num)} ₪`,
+            `לצערי, מסלול שאגת הארי מיועד לעסקים עם מחזור שנתי של ${formatCurrency(MIN_ANNUAL_REVENUE)} ₪ ומעלה.\nהמחזור שהזנת (${formatCurrency(num)} ₪) נמוך מהסף הנדרש.\n\nמומלץ לפנות לרשות המיסים לבדיקת מסלולים חלופיים.`,
             "done", 4, { annualRevenue: num }
           );
           break;
         }
-
-        // 12,000–300,000 NIS — mid range (table lookup)
         if (num < MID_RANGE_THRESHOLD) {
           setActiveSteps(STEPS_MID);
-          addMessages(
-            `${formatCurrency(num)} ₪`,
-            "מהן ההכנסות ברוטו בתקופת הבסיס — מרץ-אפריל 2025? (בשקלים)",
-            "base_revenue", 4, { annualRevenue: num, isMidRange: true }
-          );
-          break;
+        } else {
+          setActiveSteps(STEPS_LARGE);
         }
-
-        // ≥ 300,000 NIS — full flow
-        setActiveSteps(STEPS_FULL);
-        addMessages(
-          `${formatCurrency(num)} ₪`,
-          "מהן ההכנסות ברוטו בתקופת הבסיס — מרץ-אפריל 2025? (בשקלים)",
-          "base_revenue", 4, { annualRevenue: num, isMidRange: false }
-        );
+        addMessages(`${formatCurrency(num)} ₪`, "מהן ההכנסות ברוטו בתקופת הבסיס — מרץ-אפריל 2025? (בשקלים)", "base_revenue", 4, { annualRevenue: num });
         break;
       }
 
@@ -134,30 +149,10 @@ export default function Home() {
         if (isNaN(num) || num <= 0) {
           setMessages(prev => [...prev, { text: value, isAgent: false }]);
           setIsTyping(true);
-          setTimeout(() => {
-            setIsTyping(false);
-            setMessages(prev => [...prev,
-              { text: "אנא הזן מספר תקין (למשל: 80000)", isAgent: true }
-            ]);
-          }, 400);
+          setTimeout(() => { setIsTyping(false); setMessages(prev => [...prev, { text: "אנא הזן מספר תקין (למשל: 80000)", isAgent: true }]); }, 400);
           return;
         }
-        if (num > data.annualRevenue) {
-          setMessages(prev => [...prev, { text: `${formatCurrency(num)} ₪`, isAgent: false }]);
-          setIsTyping(true);
-          setTimeout(() => {
-            setIsTyping(false);
-            setMessages(prev => [...prev,
-              { text: `הכנסות תקופת הבסיס (${formatCurrency(num)} ₪) לא יכולות להיות גבוהות מהמחזור השנתי (${formatCurrency(data.annualRevenue)} ₪).\nאנא הזן שוב את הכנסות מרץ-אפריל 2025.`, isAgent: true }
-            ]);
-          }, 400);
-          return;
-        }
-        addMessages(
-          `${formatCurrency(num)} ₪`,
-          "מהן ההכנסות ברוטו בתקופת הפיצוי — מרץ-אפריל 2026? (בשקלים)\nניתן להזין 0.",
-          "compensation_revenue", 5, { baseRevenue: num }
-        );
+        addMessages(`${formatCurrency(num)} ₪`, "מהן ההכנסות ברוטו בתקופת הפיצוי — מרץ-אפריל 2026? (בשקלים)\nניתן להזין 0.", "compensation_revenue", 5, { baseRevenue: num });
         break;
       }
 
@@ -166,61 +161,25 @@ export default function Home() {
         if (isNaN(num) || num < 0) {
           setMessages(prev => [...prev, { text: value, isAgent: false }]);
           setIsTyping(true);
-          setTimeout(() => {
-            setIsTyping(false);
-            setMessages(prev => [...prev,
-              { text: "אנא הזן מספר תקין (למשל: 40000). ניתן להזין 0.", isAgent: true }
-            ]);
-          }, 400);
+          setTimeout(() => { setIsTyping(false); setMessages(prev => [...prev, { text: "אנא הזן מספר תקין (למשל: 40000). ניתן להזין 0.", isAgent: true }]); }, 400);
           return;
         }
 
-        // Mid-range: skip expenses & salary — calculate directly
-        if (data.isMidRange) {
-          const updatedData = { ...data, compensationRevenue: num };
-          const declinePercent = calculateDecline(updatedData.baseRevenue, num);
-          const compensation = calculateMidRangeCompensation(updatedData.annualRevenue, declinePercent);
-
-          const resultData = {
-            eligible: compensation.eligible,
-            declinePercent,
-            totalAmount: compensation.totalAmount,
-            baseAmount: compensation.baseAmount,
-            damageCoefficient: compensation.damageCoefficient,
-            annualRevenue: updatedData.annualRevenue,
-            businessType: updatedData.businessType,
-            isMidRange: true,
-          };
-
+        // Mid-range: skip salary/expenses steps
+        if (data.annualRevenue < MID_RANGE_THRESHOLD) {
           setMessages(prev => [...prev, { text: `${formatCurrency(num)} ₪`, isAgent: false }]);
           setIsTyping(true);
-          setTimeout(async () => {
+          setTimeout(() => {
             setIsTyping(false);
-            setMessages(prev => [...prev, { text: "מחשב את הזכאות שלך... 📊", isAgent: true }]);
-
-            base44.entities.EligibilityCheck.create({
-              business_type: updatedData.businessType,
-              annual_revenue: updatedData.annualRevenue,
-              base_revenue: updatedData.baseRevenue,
-              compensation_revenue: num,
-              decline_percent: declinePercent,
-              eligible: compensation.eligible,
-              compensation_amount: compensation.totalAmount,
-            }).then(record => { if (record?.id) setSavedCheckId(record.id); });
-
-            setTimeout(() => {
-              setResult(resultData);
-              setStep("result");
-              setStepIndex(6);
-            }, 800);
+            const updatedData = { ...data, compensationRevenue: num, monthlyExpenses: 0, grossSalary: 0 };
+            setData(updatedData);
+            finishAndCalc(updatedData);
           }, 600);
           return;
         }
 
-        // Full flow: continue to expenses
-        addMessages(
-          `${formatCurrency(num)} ₪`,
-          "מה סך ההוצאות הקבועות של העסק בשנת 2025 (שכירות, חשמל, ביטוחים וכו׳)? (בשקלים)\nהכנס את הסכום השנתי הכולל.",
+        addMessages(`${formatCurrency(num)} ₪`,
+          "מה הממוצע החודשי של הוצאות העסק בשנת 2025? (שכירות, חשמל, ביטוחים וכו׳)\nבשקלים — למשל: 20000",
           "monthly_expenses", 6, { compensationRevenue: num }
         );
         break;
@@ -231,18 +190,12 @@ export default function Home() {
         if (isNaN(num) || num < 0) {
           setMessages(prev => [...prev, { text: value, isAgent: false }]);
           setIsTyping(true);
-          setTimeout(() => {
-            setIsTyping(false);
-            setMessages(prev => [...prev,
-              { text: "אנא הזן מספר תקין (למשל: 240000). ניתן להזין 0.", isAgent: true }
-            ]);
-          }, 400);
+          setTimeout(() => { setIsTyping(false); setMessages(prev => [...prev, { text: "אנא הזן מספר תקין (למשל: 20000). ניתן להזין 0.", isAgent: true }]); }, 400);
           return;
         }
-        addMessages(
-          `${formatCurrency(num)} ₪`,
-          "מה שכר הברוטו של העובדים בחודש מרץ 2026? (בשקלים)\nתקרת החישוב לעובד: 13,769 ₪. אם אין עובדים, הזן 0.",
-          "monthly_salary", 7, { annualExpenses: num }
+        addMessages(`${formatCurrency(num)} ₪`,
+          "מה שכר הברוטו הכולל של העובדים בחודש מרץ 2026? (בשקלים)\nתקרת החישוב לעובד: 13,769 ₪. אם אין עובדים, הזן 0.\nאין לכלול עובדים בחופשה / מילואים / חל\"ת.",
+          "monthly_salary", 7, { monthlyExpenses: num }
         );
         break;
       }
@@ -252,57 +205,27 @@ export default function Home() {
         if (isNaN(num) || num < 0) {
           setMessages(prev => [...prev, { text: value, isAgent: false }]);
           setIsTyping(true);
-          setTimeout(() => {
-            setIsTyping(false);
-            setMessages(prev => [...prev,
-              { text: "אנא הזן מספר תקין (למשל: 50000). ניתן להזין 0.", isAgent: true }
-            ]);
-          }, 400);
+          setTimeout(() => { setIsTyping(false); setMessages(prev => [...prev, { text: "אנא הזן מספר תקין (למשל: 50000). ניתן להזין 0.", isAgent: true }]); }, 400);
           return;
         }
+        addMessages(`${formatCurrency(num)} ₪`,
+          "האם בית העסק שלך ספג נזק ישיר (פיזי) כתוצאה מהמלחמה?",
+          "direct_damage", 8, { grossSalary: num }
+        );
+        break;
+      }
 
-        const updatedData = { ...data, monthlySalary: num };
-        const declinePercent = calculateDecline(updatedData.baseRevenue, updatedData.compensationRevenue);
-        const compensation = calculateCompensation(declinePercent, updatedData.annualExpenses, num, updatedData.annualRevenue);
-
-        const resultData = {
-          eligible: compensation.eligible,
-          declinePercent,
-          fixedCostsAmount: compensation.fixedCostsAmount,
-          salaryAmount: compensation.salaryAmount,
-          totalAmount: compensation.totalAmount,
-          cap: compensation.cap,
-          annualRevenue: updatedData.annualRevenue,
-          businessType: updatedData.businessType,
-        };
-
-        setMessages(prev => [...prev, { text: `${formatCurrency(num)} ₪`, isAgent: false }]);
+      case "direct_damage": {
+        const hasDirectDamage = value === "yes";
+        const userLabel = hasDirectDamage ? "כן, יש נזק ישיר" : "לא, אין נזק ישיר";
+        setMessages(prev => [...prev, { text: userLabel, isAgent: false }]);
         setIsTyping(true);
-
-        setTimeout(async () => {
+        setTimeout(() => {
           setIsTyping(false);
-          setMessages(prev => [...prev,
-            { text: "מחשב את הזכאות שלך... 📊", isAgent: true }
-          ]);
-
-          // Save to DB
-          base44.entities.EligibilityCheck.create({
-            business_type: updatedData.businessType,
-            annual_revenue: updatedData.annualRevenue,
-            base_revenue: updatedData.baseRevenue,
-            compensation_revenue: updatedData.compensationRevenue,
-            decline_percent: declinePercent,
-            eligible: compensation.eligible,
-            compensation_amount: compensation.totalAmount,
-          }).then(record => {
-            if (record?.id) setSavedCheckId(record.id);
-          });
-
-          setTimeout(() => {
-            setResult(resultData);
-            setStep("result");
-            setStepIndex(8);
-          }, 800);
+          setMessages(prev => [...prev, { text: "מחשב את הזכאות שלך... 📊", isAgent: true }]);
+          const updatedData = { ...data, hasDirectDamage };
+          setData(updatedData);
+          finishAndCalc(updatedData);
         }, 600);
         break;
       }
@@ -310,13 +233,13 @@ export default function Home() {
       default:
         break;
     }
-  }, [step, data, addMessages]);
+  }, [step, data, addMessages, finishAndCalc]);
 
   const handleReset = () => {
     setMessages([{ text: INITIAL_MESSAGE, isAgent: true }]);
     setStep("welcome");
     setStepIndex(0);
-    setActiveSteps(STEPS_FULL);
+    setActiveSteps(STEPS_LARGE);
     setData({});
     setResult(null);
     setSavedCheckId(null);
@@ -336,27 +259,22 @@ export default function Home() {
       case "welcome":
         return { options: [{ label: "כן, בוא נתחיל ✨", value: "start" }] };
       case "business_active":
-        return { options: [
-          { label: "כן ✅", value: "yes" },
-          { label: "לא ❌", value: "no" }
-        ]};
+        return { options: [{ label: "כן ✅", value: "yes" }, { label: "לא ❌", value: "no" }] };
       case "business_type":
         return { options: [
+          { label: "עוסק יחיד", value: "עוסק יחיד" },
           { label: "עוסק מורשה", value: "עוסק מורשה" },
           { label: "עוסק פטור", value: "עוסק פטור" },
           { label: "חברה בע\"מ", value: "חברה בע\"מ" },
-          { label: "שותפות", value: "שותפות" }
+          { label: "שותפות", value: "שותפות" },
         ]};
-      case "annual_revenue":
-        return { placeholder: "למשל: 500000", type: "text" };
-      case "base_revenue":
-        return { placeholder: "הכנסות מרץ-אפריל 2025", type: "text" };
-      case "compensation_revenue":
-        return { placeholder: "הכנסות מרץ-אפריל 2026", type: "text" };
-      case "monthly_expenses":
-        return { placeholder: "סה\"כ הוצאות קבועות 2025 (₪)", type: "text" };
-      case "monthly_salary":
-        return { placeholder: "שכר ברוטו מרץ 2026 (₪)", type: "text" };
+      case "annual_revenue":      return { placeholder: "למשל: 500000", type: "text" };
+      case "base_revenue":        return { placeholder: "הכנסות מרץ-אפריל 2025 (₪)", type: "text" };
+      case "compensation_revenue":return { placeholder: "הכנסות מרץ-אפריל 2026 (₪)", type: "text" };
+      case "monthly_expenses":    return { placeholder: "ממוצע הוצאות חודשיות 2025 (₪)", type: "text" };
+      case "monthly_salary":      return { placeholder: "שכר ברוטו כולל מרץ 2026 (₪)", type: "text" };
+      case "direct_damage":
+        return { options: [{ label: "כן, יש נזק ישיר 🏚️", value: "yes" }, { label: "לא, אין נזק ישיר", value: "no" }] };
       default:
         return null;
     }
@@ -399,11 +317,7 @@ export default function Home() {
               <Info className="w-3.5 h-3.5 flex-shrink-0 text-primary/60" />
               <span>החישובים בלבד נשמרים לצורך מחקר — ללא פרטים מזהים</span>
             </div>
-            <button
-              onClick={() => setShowPrivacyBanner(false)}
-              className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
-              aria-label="סגור"
-            >
+            <button onClick={() => setShowPrivacyBanner(false)} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0" aria-label="סגור">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -431,7 +345,7 @@ export default function Home() {
           )}
         </div>
 
-        {/* Input Area — always pinned to bottom */}
+        {/* Input Area */}
         {inputConfig && !result && (
           <div className="flex-shrink-0 border-t border-border bg-background">
             {step === "welcome" ? (
@@ -447,12 +361,7 @@ export default function Home() {
             ) : inputConfig.options ? (
               <ChatInput options={inputConfig.options} onSend={handleSend} />
             ) : (
-              <ChatInput 
-                onSend={handleSend} 
-                placeholder={inputConfig.placeholder} 
-                type={inputConfig.type}
-                disabled={isTyping}
-              />
+              <ChatInput onSend={handleSend} placeholder={inputConfig.placeholder} type={inputConfig.type} disabled={isTyping} />
             )}
           </div>
         )}
@@ -470,21 +379,11 @@ export default function Home() {
                 {deleteConfirm ? (
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">למחוק את הנתונים?</span>
-                    <button
-                      onClick={handleDeleteRecord}
-                      className="text-xs text-destructive hover:underline"
-                    >כן</button>
-                    <button
-                      onClick={() => setDeleteConfirm(false)}
-                      className="text-xs text-muted-foreground hover:underline"
-                    >ביטול</button>
+                    <button onClick={handleDeleteRecord} className="text-xs text-destructive hover:underline">כן</button>
+                    <button onClick={() => setDeleteConfirm(false)} className="text-xs text-muted-foreground hover:underline">ביטול</button>
                   </div>
                 ) : (
-                  <button
-                    onClick={() => setDeleteConfirm(true)}
-                    className="text-muted-foreground/40 hover:text-muted-foreground transition-colors p-1"
-                    title="מחק את הנתונים שנשמרו"
-                  >
+                  <button onClick={() => setDeleteConfirm(true)} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors p-1" title="מחק את הנתונים שנשמרו">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 )}
