@@ -115,8 +115,11 @@ export function calculateMidRangeCompensation(annualRevenue, declinePercent) {
   }
 
   const row = getMidRangeBaseCompensation(annualRevenue);
-  const multiplier = row.doubleMultiplier ? 2 : 1;
-  const totalAmount = Math.round(row.base * coeff * multiplier);
+  // For rows up to 120,000: base amount is fixed (no damage coefficient)
+  // For rows above 120,000 (doubleMultiplier): base × damage coefficient
+  const totalAmount = row.doubleMultiplier
+    ? Math.round(row.base * coeff)
+    : row.base;
 
   return {
     eligible: true,
