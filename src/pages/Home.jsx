@@ -309,7 +309,7 @@ export default function Home() {
 
         {/* Input Area */}
         {inputConfig && !result && (
-          <div className="border-t border-border">
+          <div className={step === "welcome" ? "hidden" : "border-t border-border"}>
             {inputConfig.options ? (
               <ChatInput options={inputConfig.options} onSend={handleSend} />
             ) : (
@@ -320,6 +320,19 @@ export default function Home() {
                 disabled={isTyping}
               />
             )}
+          </div>
+        )}
+
+        {/* Welcome CTA — floating on mobile */}
+        {step === "welcome" && !isTyping && (
+          <div className="p-4 border-t border-border flex justify-center sm:static fixed bottom-0 left-0 right-0 sm:relative bg-background sm:bg-transparent z-20 shadow-[0_-4px_24px_rgba(0,0,0,0.10)] sm:shadow-none">
+            <button
+              onClick={() => handleSend("start")}
+              className="w-full max-w-xs rounded-2xl px-8 py-4 text-base font-bold text-primary-foreground shadow-lg transition-all duration-200 active:scale-95 hover:brightness-110"
+              style={{ background: "linear-gradient(135deg, hsl(42,87%,50%) 0%, hsl(30,90%,55%) 100%)" }}
+            >
+              🦁 התחל עכשיו
+            </button>
           </div>
         )}
 
