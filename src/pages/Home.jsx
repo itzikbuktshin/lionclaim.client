@@ -9,7 +9,7 @@ import TypingIndicator from "@/components/chat/TypingIndicator";
 import { calculateCompensation, calculateMidRangeCompensation, calculateDecline, formatCurrency, STEPS_FULL, STEPS_MID, STEPS_SHORT, MIN_ANNUAL_REVENUE, MID_RANGE_THRESHOLD } from "@/lib/compensationCalc";
 import { base44 } from "@/api/base44Client";
 
-const INITIAL_MESSAGE = "שלום! 👋\nאני הסוכן לבדיקת זכאות לפיצויים עקיפים במסלול \"שאגת הארי\".\nאעזור לך לבדוק אם העסק שלך זכאי לפיצוי ומה הסכום החודשי המשוער.\n\nהמסלול מיועד לעסקים עם מחזור שנתי של 12,000 ₪ ומעלה.\n\nנתחיל?";
+const INITIAL_MESSAGE = "שלום! 👋\nאני הסוכן לבדיקת זכאות לפיצויים עקיפים במסלול \"שאגת הארי\".\nאעזור לך לבדוק אם העסק שלך זכאי לפיצוי ומה הסכום החודשי המשוער.\n\nנתחיל?";
 
 export default function Home() {
   const [messages, setMessages] = useState([
