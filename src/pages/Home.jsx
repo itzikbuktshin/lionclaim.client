@@ -6,7 +6,7 @@ import ChatInput from "@/components/chat/ChatInput";
 import StepIndicator from "@/components/chat/StepIndicator";
 import ResultCard from "@/components/chat/ResultCard";
 import TypingIndicator from "@/components/chat/TypingIndicator";
-import { calculateCompensation, calculateDecline, formatCurrency } from "@/lib/compensationCalc";
+import { calculateCompensation, calculateDecline, formatCurrency, STEPS_FULL, STEPS_SHORT, MIN_ANNUAL_REVENUE } from "@/lib/compensationCalc";
 import { base44 } from "@/api/base44Client";
 
 const INITIAL_MESSAGE = "שלום! 👋\nאני הסוכן לבדיקת זכאות לפיצויים עקיפים במסלול \"שאגת הארי\".\nאעזור לך לבדוק אם העסק שלך זכאי לפיצוי ומה הסכום החודשי המשוער.\n\nהמסלול מיועד לעסקים עם מחזור שנתי של 300,000 ₪ ומעלה.\n\nנתחיל?";
@@ -18,6 +18,7 @@ export default function Home() {
   const [step, setStep] = useState("welcome");
   const [showPrivacyBanner, setShowPrivacyBanner] = useState(true);
   const [stepIndex, setStepIndex] = useState(0);
+  const [activeSteps, setActiveSteps] = useState(STEPS_FULL);
   const [data, setData] = useState({});
   const [isTyping, setIsTyping] = useState(false);
   const [result, setResult] = useState(null);
@@ -95,6 +96,19 @@ export default function Home() {
           }, 400);
           return;
         }
+
+        // Businesses below 300,000 NIS are not eligible
+        if (num < MIN_ANNUAL_REVENUE) {
+          setActiveSteps(STEPS_SHORT);
+          addMessages(
+            `${formatCurrency(num)} ₪`,
+            `לצערי, מסלול שאגת הארי מיועד לעסקים עם מחזור שנתי של ${formatCurrency(MIN_ANNUAL_REVENUE)} ₪ ומעלה.\nהמחזור שהזנת (${formatCurrency(num)} ₪) נמוך מהסף הנדרש.\n\nייתכן שישנם מסלולים אחרים המתאימים לעסק שלך — מומלץ לפנות לרשות המיסים.`,
+            "done", 4, { annualRevenue: num }
+          );
+          break;
+        }
+
+        setActiveSteps(STEPS_FULL);
         addMessages(
           `${formatCurrency(num)} ₪`,
           "מהן ההכנסות ברוטו בתקופת הבסיס — מרץ-אפריל 2025? (בשקלים)",
@@ -234,6 +248,7 @@ export default function Home() {
     setMessages([{ text: INITIAL_MESSAGE, isAgent: true }]);
     setStep("welcome");
     setStepIndex(0);
+    setActiveSteps(STEPS_FULL);
     setData({});
     setResult(null);
     setSavedCheckId(null);
@@ -330,7 +345,7 @@ export default function Home() {
       {/* Step Indicator */}
       <div className="bg-card border-b border-border flex-shrink-0">
         <div className="max-w-2xl mx-auto">
-          <StepIndicator currentStepIndex={stepIndex} />
+          <StepIndicator currentStepIndex={stepIndex} steps={activeSteps} />
         </div>
       </div>
 

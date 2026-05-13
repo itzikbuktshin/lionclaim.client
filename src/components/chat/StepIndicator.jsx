@@ -1,9 +1,8 @@
 import React from "react";
-import { STEPS } from "@/lib/compensationCalc";
 import { Check } from "lucide-react";
 
-export default function StepIndicator({ currentStepIndex }) {
-  const visibleSteps = STEPS.filter(s => s.id !== "welcome");
+export default function StepIndicator({ currentStepIndex, steps }) {
+  const visibleSteps = steps.filter(s => s.id !== "welcome");
 
   return (
     <div className="flex items-center justify-center gap-1 px-4 py-3" dir="rtl">
@@ -16,10 +15,10 @@ export default function StepIndicator({ currentStepIndex }) {
           <React.Fragment key={step.id}>
             <div className="flex flex-col items-center gap-1">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-300 ${
-                isComplete 
-                  ? "bg-secondary text-secondary-foreground" 
-                  : isCurrent 
-                    ? "bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-2 ring-offset-background" 
+                isComplete
+                  ? "bg-secondary text-secondary-foreground"
+                  : isCurrent
+                    ? "bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
                     : "bg-muted text-muted-foreground"
               }`}>
                 {isComplete ? <Check className="w-3.5 h-3.5" /> : stepIdx}

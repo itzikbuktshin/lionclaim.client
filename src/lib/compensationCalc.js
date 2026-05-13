@@ -57,8 +57,8 @@ export function formatCurrency(num) {
   return new Intl.NumberFormat('he-IL').format(num);
 }
 
-// Steps definition
-export const STEPS = [
+// Steps for businesses with annual revenue >= 300,000 (full flow)
+export const STEPS_FULL = [
   { id: "welcome", label: "פתיחה" },
   { id: "business_active", label: "סטטוס עסק" },
   { id: "business_type", label: "סוג עסק" },
@@ -69,3 +69,14 @@ export const STEPS = [
   { id: "monthly_salary", label: "עלות שכר" },
   { id: "result", label: "תוצאה" },
 ];
+
+// Steps for businesses with annual revenue < 300,000 (short flow — ineligible)
+export const STEPS_SHORT = [
+  { id: "welcome", label: "פתיחה" },
+  { id: "business_active", label: "סטטוס עסק" },
+  { id: "business_type", label: "סוג עסק" },
+  { id: "annual_revenue", label: "מחזור שנתי" },
+  { id: "result", label: "תוצאה" },
+];
+
+export const MIN_ANNUAL_REVENUE = 300000;
