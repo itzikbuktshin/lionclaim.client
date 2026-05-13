@@ -241,9 +241,9 @@ export default function Home() {
   const inputConfig = getInputConfig();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col" dir="rtl">
+    <div className="h-screen bg-background flex flex-col overflow-hidden" dir="rtl">
       {/* Header */}
-      <header className="bg-primary text-primary-foreground">
+      <header className="bg-primary text-primary-foreground flex-shrink-0">
         <div className="max-w-2xl mx-auto px-4 py-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center">
@@ -269,7 +269,7 @@ export default function Home() {
 
       {/* Privacy Banner */}
       {showPrivacyBanner && (
-        <div className="bg-accent border-b border-border">
+        <div className="bg-accent border-b border-border flex-shrink-0">
           <div className="max-w-2xl mx-auto px-4 py-2 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Info className="w-3.5 h-3.5 flex-shrink-0 text-primary/60" />
@@ -287,14 +287,14 @@ export default function Home() {
       )}
 
       {/* Step Indicator */}
-      <div className="bg-card border-b border-border">
+      <div className="bg-card border-b border-border flex-shrink-0">
         <div className="max-w-2xl mx-auto">
           <StepIndicator currentStepIndex={stepIndex} />
         </div>
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 overflow-hidden flex flex-col max-w-2xl mx-auto w-full">
+      <div className="flex-1 min-h-0 flex flex-col max-w-2xl mx-auto w-full">
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
           {messages.map((msg, i) => (
             <ChatMessage key={i} message={msg.text} isAgent={msg.isAgent} />
@@ -307,10 +307,20 @@ export default function Home() {
           )}
         </div>
 
-        {/* Input Area */}
+        {/* Input Area — always pinned to bottom */}
         {inputConfig && !result && (
-          <div className={step === "welcome" ? "hidden" : "border-t border-border"}>
-            {inputConfig.options ? (
+          <div className="flex-shrink-0 border-t border-border bg-background">
+            {step === "welcome" ? (
+              <div className="p-4 flex justify-center">
+                <button
+                  onClick={() => handleSend("start")}
+                  className="w-full max-w-xs rounded-2xl px-8 py-4 text-base font-bold text-primary-foreground shadow-lg transition-all duration-200 active:scale-95 hover:brightness-110"
+                  style={{ background: "linear-gradient(135deg, hsl(42,87%,50%) 0%, hsl(30,90%,55%) 100%)" }}
+                >
+                  🦁 התחל עכשיו
+                </button>
+              </div>
+            ) : inputConfig.options ? (
               <ChatInput options={inputConfig.options} onSend={handleSend} />
             ) : (
               <ChatInput 
@@ -320,19 +330,6 @@ export default function Home() {
                 disabled={isTyping}
               />
             )}
-          </div>
-        )}
-
-        {/* Welcome CTA — floating on mobile */}
-        {step === "welcome" && !isTyping && (
-          <div className="p-4 border-t border-border flex justify-center sm:static fixed bottom-0 left-0 right-0 sm:relative bg-background sm:bg-transparent z-20 shadow-[0_-4px_24px_rgba(0,0,0,0.10)] sm:shadow-none">
-            <button
-              onClick={() => handleSend("start")}
-              className="w-full max-w-xs rounded-2xl px-8 py-4 text-base font-bold text-primary-foreground shadow-lg transition-all duration-200 active:scale-95 hover:brightness-110"
-              style={{ background: "linear-gradient(135deg, hsl(42,87%,50%) 0%, hsl(30,90%,55%) 100%)" }}
-            >
-              🦁 התחל עכשיו
-            </button>
           </div>
         )}
 
