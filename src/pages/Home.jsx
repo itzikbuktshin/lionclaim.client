@@ -295,7 +295,7 @@ export default function Home() {
           <div className="p-4 border-t border-border flex justify-center">
             <Button onClick={handleReset} variant="outline" className="rounded-full gap-2">
               <RotateCcw className="w-4 h-4" />
-              בדיקה חדשה
+              התחל מחדש
             </Button>
           </div>
         )}
