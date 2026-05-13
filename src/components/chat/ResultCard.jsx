@@ -225,22 +225,21 @@ export default function ResultCard({ result }) {
               </ul>
             </div>
           )}
-          <div className="mt-6 pt-4 border-t border-border">
-            <Button
-              onClick={handleExportPDF}
-              disabled={exporting}
-              className="w-full rounded-xl gap-2 bg-primary hover:bg-primary/90"
-            >
-              {exporting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4" />
-              )}
-              ייצוא דוח PDF
-            </Button>
-          </div>
         </CardContent>
       </Card>
+
+      <Button
+        onClick={handleExportPDF}
+        disabled={exporting}
+        className="w-full mt-3 rounded-xl gap-2 bg-primary hover:bg-primary/90"
+      >
+        {exporting ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <Download className="w-4 h-4" />
+        )}
+        ייצוא דוח PDF
+      </Button>
     </motion.div>
   );
 }
