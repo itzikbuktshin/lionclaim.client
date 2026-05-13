@@ -142,6 +142,17 @@ export default function Home() {
           }, 400);
           return;
         }
+        if (num > data.annualRevenue) {
+          setMessages(prev => [...prev, { text: `${formatCurrency(num)} ₪`, isAgent: false }]);
+          setIsTyping(true);
+          setTimeout(() => {
+            setIsTyping(false);
+            setMessages(prev => [...prev,
+              { text: `הכנסות תקופת הבסיס (${formatCurrency(num)} ₪) לא יכולות להיות גבוהות מהמחזור השנתי (${formatCurrency(data.annualRevenue)} ₪).\nאנא הזן שוב את הכנסות מרץ-אפריל 2025.`, isAgent: true }
+            ]);
+          }, 400);
+          return;
+        }
         addMessages(
           `${formatCurrency(num)} ₪`,
           "מהן ההכנסות ברוטו בתקופת הפיצוי — מרץ-אפריל 2026? (בשקלים)\nניתן להזין 0.",
