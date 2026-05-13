@@ -6,7 +6,7 @@ import ChatInput from "@/components/chat/ChatInput";
 import StepIndicator from "@/components/chat/StepIndicator";
 import ResultCard from "@/components/chat/ResultCard";
 import TypingIndicator from "@/components/chat/TypingIndicator";
-import { calculateCompensation, calculateDecline, formatCurrency, STEPS_FULL, STEPS_SHORT, MIN_ANNUAL_REVENUE } from "@/lib/compensationCalc";
+import { calculateCompensation, calculateMidRangeCompensation, calculateDecline, formatCurrency, STEPS_FULL, STEPS_MID, STEPS_SHORT, MIN_ANNUAL_REVENUE, MID_RANGE_THRESHOLD } from "@/lib/compensationCalc";
 import { base44 } from "@/api/base44Client";
 
 const INITIAL_MESSAGE = "שלום! 👋\nאני הסוכן לבדיקת זכאות לפיצויים עקיפים במסלול \"שאגת הארי\".\nאעזור לך לבדוק אם העסק שלך זכאי לפיצוי ומה הסכום החודשי המשוער.\n\nהמסלול מיועד לעסקים עם מחזור שנתי של 300,000 ₪ ומעלה.\n\nנתחיל?";
@@ -97,7 +97,7 @@ export default function Home() {
           return;
         }
 
-        // Businesses below 300,000 NIS are not eligible
+        // Below 12,000 NIS — ineligible
         if (num < MIN_ANNUAL_REVENUE) {
           setActiveSteps(STEPS_SHORT);
           addMessages(
@@ -108,11 +108,23 @@ export default function Home() {
           break;
         }
 
+        // 12,000–300,000 NIS — mid range (table lookup)
+        if (num < MID_RANGE_THRESHOLD) {
+          setActiveSteps(STEPS_MID);
+          addMessages(
+            `${formatCurrency(num)} ₪`,
+            "מהן ההכנסות ברוטו בתקופת הבסיס — מרץ-אפריל 2025? (בשקלים)",
+            "base_revenue", 4, { annualRevenue: num, isMidRange: true }
+          );
+          break;
+        }
+
+        // ≥ 300,000 NIS — full flow
         setActiveSteps(STEPS_FULL);
         addMessages(
           `${formatCurrency(num)} ₪`,
           "מהן ההכנסות ברוטו בתקופת הבסיס — מרץ-אפריל 2025? (בשקלים)",
-          "base_revenue", 4, { annualRevenue: num }
+          "base_revenue", 4, { annualRevenue: num, isMidRange: false }
         );
         break;
       }
@@ -151,6 +163,50 @@ export default function Home() {
           }, 400);
           return;
         }
+
+        // Mid-range: skip expenses & salary — calculate directly
+        if (data.isMidRange) {
+          const updatedData = { ...data, compensationRevenue: num };
+          const declinePercent = calculateDecline(updatedData.baseRevenue, num);
+          const compensation = calculateMidRangeCompensation(updatedData.annualRevenue, declinePercent);
+
+          const resultData = {
+            eligible: compensation.eligible,
+            declinePercent,
+            totalAmount: compensation.totalAmount,
+            baseAmount: compensation.baseAmount,
+            damageCoefficient: compensation.damageCoefficient,
+            annualRevenue: updatedData.annualRevenue,
+            businessType: updatedData.businessType,
+            isMidRange: true,
+          };
+
+          setMessages(prev => [...prev, { text: `${formatCurrency(num)} ₪`, isAgent: false }]);
+          setIsTyping(true);
+          setTimeout(async () => {
+            setIsTyping(false);
+            setMessages(prev => [...prev, { text: "מחשב את הזכאות שלך... 📊", isAgent: true }]);
+
+            base44.entities.EligibilityCheck.create({
+              business_type: updatedData.businessType,
+              annual_revenue: updatedData.annualRevenue,
+              base_revenue: updatedData.baseRevenue,
+              compensation_revenue: num,
+              decline_percent: declinePercent,
+              eligible: compensation.eligible,
+              compensation_amount: compensation.totalAmount,
+            }).then(record => { if (record?.id) setSavedCheckId(record.id); });
+
+            setTimeout(() => {
+              setResult(resultData);
+              setStep("result");
+              setStepIndex(6);
+            }, 800);
+          }, 600);
+          return;
+        }
+
+        // Full flow: continue to expenses
         addMessages(
           `${formatCurrency(num)} ₪`,
           "מה הממוצע החודשי של ההוצאות הקבועות של העסק (שכירות, חשמל, ביטוחים וכו׳)? (בשקלים)",

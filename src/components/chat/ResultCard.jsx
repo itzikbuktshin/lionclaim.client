@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, getDeclineRangeLabel, getFixedCostsCoefficient } from "@/lib/compensationCalc";
+import { formatCurrency, getDeclineRangeLabel, getFixedCostsCoefficient, getDamageCoefficient } from "@/lib/compensationCalc";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
@@ -27,7 +27,7 @@ function ResultRow({ icon: Icon, label, value, highlight }) {
 }
 
 export default function ResultCard({ result }) {
-  const { eligible, declinePercent, fixedCostsAmount, salaryAmount, totalAmount, annualRevenue, businessType } = result;
+  const { eligible, declinePercent, fixedCostsAmount, salaryAmount, totalAmount, annualRevenue, businessType, isMidRange, baseAmount, damageCoefficient } = result;
   const [exporting, setExporting] = useState(false);
   const cardRef = useRef(null);
   const coefficient = getFixedCostsCoefficient(declinePercent);
@@ -105,7 +105,7 @@ export default function ResultCard({ result }) {
             <ResultRow icon={TrendingDown} label="ירידת הכנסות" value={`${declinePercent}%`} />
             <Separator />
 
-            {eligible && (
+            {eligible && !isMidRange && (
               <>
                 <ResultRow icon={AlertTriangle} label="טווח נזק" value={getDeclineRangeLabel(declinePercent)} />
                 <Separator />
@@ -114,6 +114,23 @@ export default function ResultCard({ result }) {
                 <ResultRow icon={Calculator} label="רכיב הוצאות קבועות" value={`${formatCurrency(fixedCostsAmount)} ₪`} />
                 <Separator />
                 <ResultRow icon={DollarSign} label="רכיב שכר" value={`${formatCurrency(salaryAmount)} ₪`} />
+                <Separator />
+                <ResultRow
+                  icon={CheckCircle}
+                  label="סך פיצוי חודשי משוער"
+                  value={`${formatCurrency(totalAmount)} ₪`}
+                  highlight
+                />
+              </>
+            )}
+
+            {eligible && isMidRange && (
+              <>
+                <ResultRow icon={AlertTriangle} label="טווח נזק" value={getDeclineRangeLabel(declinePercent)} />
+                <Separator />
+                <ResultRow icon={Calculator} label="פיצוי בסיס (לפי מחזור)" value={`${formatCurrency(baseAmount)} ₪`} />
+                <Separator />
+                <ResultRow icon={Calculator} label="מקדם נזק" value={`×${damageCoefficient}`} />
                 <Separator />
                 <ResultRow
                   icon={CheckCircle}
