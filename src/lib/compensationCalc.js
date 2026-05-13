@@ -41,12 +41,24 @@ export function formatCurrency(num) {
 // ─── HIGH revenue (≥ 300,000 NIS) ────────────────────────────────────────────
 // Fixed costs component + salary component
 
+const MAX_SALARY_FOR_CALC = 13769; // ₪ תקרת שכר ברוטו לחישוב
+
 /**
- * @param {number} declinePercent
- * @param {number} monthlyExpenses
- * @param {number} monthlySalary
+ * תקרה חודשית לפי מחזור שנתי
  */
-export function calculateCompensation(declinePercent, monthlyExpenses, monthlySalary) {
+export function getMonthlyCapByRevenue(annualRevenue) {
+  if (annualRevenue <= 100_000_000) return 600_000;
+  if (annualRevenue <= 300_000_000) return 600_000 + 0.003 * (annualRevenue - 100_000_000);
+  return 1_200_000;
+}
+
+/**
+ * @param {number} declinePercent       - % ירידת הכנסות
+ * @param {number} annualExpenses2025   - סה"כ הוצאות 2025 (שנתי)
+ * @param {number} grossSalaryMarch2026 - שכר ברוטו מרץ 2026
+ * @param {number} annualRevenue        - מחזור שנתי לצורך תקרה
+ */
+export function calculateCompensation(declinePercent, annualExpenses2025, grossSalaryMarch2026, annualRevenue) {
   const coefficient = getFixedCostsCoefficient(declinePercent);
 
   if (coefficient === 0) {
@@ -54,11 +66,20 @@ export function calculateCompensation(declinePercent, monthlyExpenses, monthlySa
   }
 
   const declineRate = declinePercent / 100;
-  const fixedCostsAmount = Math.round(monthlyExpenses * coefficient);
-  const salaryAmount = Math.round(monthlySalary * declineRate * 1.25);
-  const totalAmount = fixedCostsAmount + salaryAmount;
 
-  return { eligible: true, fixedCostsAmount, salaryAmount, totalAmount };
+  // רכיב תשומות: (הוצאות שנתיות ÷ 12) × מקדם
+  const monthlyExpenses = annualExpenses2025 / 12;
+  const fixedCostsAmount = Math.round(monthlyExpenses * coefficient);
+
+  // רכיב שכר: min(שכר, תקרה) × 125% × % ירידה × 75%
+  const cappedSalary = Math.min(grossSalaryMarch2026, MAX_SALARY_FOR_CALC);
+  const salaryAmount = Math.round(cappedSalary * 1.25 * declineRate * 0.75);
+
+  const rawTotal = fixedCostsAmount + salaryAmount;
+  const cap = annualRevenue ? getMonthlyCapByRevenue(annualRevenue) : 600_000;
+  const totalAmount = Math.min(rawTotal, cap);
+
+  return { eligible: true, fixedCostsAmount, salaryAmount, totalAmount, cap };
 }
 
 // ─── MID revenue (12,000–300,000 NIS) ────────────────────────────────────────

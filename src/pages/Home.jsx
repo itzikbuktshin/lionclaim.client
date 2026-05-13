@@ -220,7 +220,7 @@ export default function Home() {
         // Full flow: continue to expenses
         addMessages(
           `${formatCurrency(num)} ₪`,
-          "מה הממוצע החודשי של ההוצאות הקבועות של העסק (שכירות, חשמל, ביטוחים וכו׳)? (בשקלים)",
+          "מה סך ההוצאות הקבועות של העסק בשנת 2025 (שכירות, חשמל, ביטוחים וכו׳)? (בשקלים)\nהכנס את הסכום השנתי הכולל.",
           "monthly_expenses", 6, { compensationRevenue: num }
         );
         break;
@@ -234,14 +234,14 @@ export default function Home() {
           setTimeout(() => {
             setIsTyping(false);
             setMessages(prev => [...prev,
-              { text: "אנא הזן מספר תקין (למשל: 20000). ניתן להזין 0.", isAgent: true }
+              { text: "אנא הזן מספר תקין (למשל: 240000). ניתן להזין 0.", isAgent: true }
             ]);
           }, 400);
           return;
         }
         addMessages(
           `${formatCurrency(num)} ₪`,
-          "מה עלות השכר החודשית הכוללת של העסק (כולל עלות מעביד)? (בשקלים)\nאם אין עובדים, הזן 0.",
+          "מה שכר הברוטו של העובדים בחודש מרץ 2026? (בשקלים)\nתקרת החישוב לעובד: 13,769 ₪. אם אין עובדים, הזן 0.",
           "monthly_salary", 7, { monthlyExpenses: num }
         );
         break;
@@ -263,7 +263,7 @@ export default function Home() {
 
         const updatedData = { ...data, monthlySalary: num };
         const declinePercent = calculateDecline(updatedData.baseRevenue, updatedData.compensationRevenue);
-        const compensation = calculateCompensation(declinePercent, updatedData.monthlyExpenses, num);
+        const compensation = calculateCompensation(declinePercent, updatedData.monthlyExpenses, num, updatedData.annualRevenue);
 
         const resultData = {
           eligible: compensation.eligible,
@@ -271,6 +271,7 @@ export default function Home() {
           fixedCostsAmount: compensation.fixedCostsAmount,
           salaryAmount: compensation.salaryAmount,
           totalAmount: compensation.totalAmount,
+          cap: compensation.cap,
           annualRevenue: updatedData.annualRevenue,
           businessType: updatedData.businessType,
         };
@@ -353,9 +354,9 @@ export default function Home() {
       case "compensation_revenue":
         return { placeholder: "הכנסות מרץ-אפריל 2026", type: "text" };
       case "monthly_expenses":
-        return { placeholder: "הוצאות קבועות חודשיות (₪)", type: "text" };
+        return { placeholder: "סה\"כ הוצאות קבועות 2025 (₪)", type: "text" };
       case "monthly_salary":
-        return { placeholder: "עלות שכר חודשית (₪)", type: "text" };
+        return { placeholder: "שכר ברוטו מרץ 2026 (₪)", type: "text" };
       default:
         return null;
     }

@@ -27,7 +27,7 @@ function ResultRow({ icon: Icon, label, value, highlight }) {
 }
 
 export default function ResultCard({ result }) {
-  const { eligible, declinePercent, fixedCostsAmount, salaryAmount, totalAmount, annualRevenue, businessType, isMidRange, baseAmount, damageCoefficient } = result;
+  const { eligible, declinePercent, fixedCostsAmount, salaryAmount, totalAmount, annualRevenue, businessType, isMidRange, baseAmount, damageCoefficient, cap } = result;
   const [exporting, setExporting] = useState(false);
   const cardRef = useRef(null);
   const coefficient = getFixedCostsCoefficient(declinePercent);
@@ -115,6 +115,12 @@ export default function ResultCard({ result }) {
                 <Separator />
                 <ResultRow icon={DollarSign} label="רכיב שכר" value={`${formatCurrency(salaryAmount)} ₪`} />
                 <Separator />
+                {cap && (fixedCostsAmount + salaryAmount) > cap && (
+                  <>
+                    <ResultRow icon={AlertTriangle} label="תקרה חודשית" value={`${formatCurrency(cap)} ₪`} />
+                    <Separator />
+                  </>
+                )}
                 <ResultRow
                   icon={CheckCircle}
                   label="סך פיצוי חודשי משוער"
