@@ -242,7 +242,7 @@ export default function Home() {
         addMessages(
           `${formatCurrency(num)} ₪`,
           "מה שכר הברוטו של העובדים בחודש מרץ 2026? (בשקלים)\nתקרת החישוב לעובד: 13,769 ₪. אם אין עובדים, הזן 0.",
-          "monthly_salary", 7, { monthlyExpenses: num }
+          "monthly_salary", 7, { annualExpenses: num }
         );
         break;
       }
@@ -263,7 +263,7 @@ export default function Home() {
 
         const updatedData = { ...data, monthlySalary: num };
         const declinePercent = calculateDecline(updatedData.baseRevenue, updatedData.compensationRevenue);
-        const compensation = calculateCompensation(declinePercent, updatedData.monthlyExpenses, num, updatedData.annualRevenue);
+        const compensation = calculateCompensation(declinePercent, updatedData.annualExpenses, num, updatedData.annualRevenue);
 
         const resultData = {
           eligible: compensation.eligible,
