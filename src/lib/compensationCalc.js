@@ -32,13 +32,13 @@ export function calculateCompensation(annualRevenue, declinePercent) {
   let tier = "";
 
   if (annualRevenue <= 50000) {
-    amount = Math.round(1864 * coefficient);
+    amount = 1864;
     tier = "עד 50,000 ₪";
   } else if (annualRevenue <= 90000) {
-    amount = Math.round(3356 * coefficient);
+    amount = 3356;
     tier = "50,001 - 90,000 ₪";
   } else if (annualRevenue <= 120000) {
-    amount = Math.round(4475 * coefficient);
+    amount = 4475;
     tier = "90,001 - 120,000 ₪";
   } else if (annualRevenue <= 150000) {
     amount = Math.round(2823 * coefficient);
