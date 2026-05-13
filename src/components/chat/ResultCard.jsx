@@ -2,13 +2,13 @@ import React, { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { 
   CheckCircle, XCircle, TrendingDown, Calculator, 
-  FileText, AlertTriangle, Award, Download, Loader2
+  FileText, AlertTriangle, Award, Download, Loader2, DollarSign
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, getDamageCoefficientLabel } from "@/lib/compensationCalc";
+import { formatCurrency, getDeclineRangeLabel, getFixedCostsCoefficient } from "@/lib/compensationCalc";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
@@ -27,9 +27,10 @@ function ResultRow({ icon: Icon, label, value, highlight }) {
 }
 
 export default function ResultCard({ result }) {
-  const { eligible, declinePercent, coefficient, amount, tier, annualRevenue, businessType } = result;
+  const { eligible, declinePercent, fixedCostsAmount, salaryAmount, totalAmount, annualRevenue, businessType } = result;
   const [exporting, setExporting] = useState(false);
   const cardRef = useRef(null);
+  const coefficient = getFixedCostsCoefficient(declinePercent);
 
   const handleExportPDF = async () => {
     if (!cardRef.current) return;
@@ -58,9 +59,9 @@ export default function ResultCard({ result }) {
   };
 
   const requiredDocs = [
-    "דוחות כספיים / רווח והפסד לשנת 2025",
     "דוחות מע\"מ לתקופת הבסיס (מרץ-אפריל 2025)",
-    "דוחות מע\"מ לתקופת הפיצוי",
+    "דוחות מע\"מ לתקופת הפיצוי (מרץ-אפריל 2026)",
+    "דוחות שכר לשנת 2025",
     "אישור ניהול חשבון בנק",
     "צילום תעודת זהות של בעל העסק",
     "אישור רואה חשבון / יועץ מס"
@@ -99,24 +100,26 @@ export default function ResultCard({ result }) {
           <div className="space-y-1">
             <ResultRow icon={FileText} label="סוג עסק" value={businessType} />
             <Separator />
-            <ResultRow icon={Calculator} label="הכנסות שנתיות (2025)" value={`${formatCurrency(annualRevenue)} ₪`} />
+            <ResultRow icon={Calculator} label="מחזור שנתי (2025)" value={`${formatCurrency(annualRevenue)} ₪`} />
             <Separator />
-            <ResultRow icon={TrendingDown} label="שיעור ירידת הכנסות" value={`${declinePercent}%`} />
+            <ResultRow icon={TrendingDown} label="ירידת הכנסות" value={`${declinePercent}%`} />
             <Separator />
 
             {eligible && (
               <>
-                <ResultRow icon={AlertTriangle} label="טווח נזק" value={getDamageCoefficientLabel(declinePercent)} />
+                <ResultRow icon={AlertTriangle} label="טווח נזק" value={getDeclineRangeLabel(declinePercent)} />
                 <Separator />
-                <ResultRow icon={Calculator} label="מקדם נזק" value={`×${coefficient}`} />
+                <ResultRow icon={Calculator} label="מקדם הוצאות קבועות" value={`${(coefficient * 100).toFixed(0)}%`} />
                 <Separator />
-                <ResultRow icon={Calculator} label="מדרגת פיצוי" value={tier} />
+                <ResultRow icon={Calculator} label="רכיב הוצאות קבועות" value={`${formatCurrency(fixedCostsAmount)} ₪`} />
                 <Separator />
-                <ResultRow 
-                  icon={CheckCircle} 
-                  label="סכום פיצוי משוער" 
-                  value={`${formatCurrency(amount)} ₪`} 
-                  highlight 
+                <ResultRow icon={DollarSign} label="רכיב שכר" value={`${formatCurrency(salaryAmount)} ₪`} />
+                <Separator />
+                <ResultRow
+                  icon={CheckCircle}
+                  label="סך פיצוי חודשי משוער"
+                  value={`${formatCurrency(totalAmount)} ₪`}
+                  highlight
                 />
               </>
             )}
@@ -136,7 +139,6 @@ export default function ResultCard({ result }) {
                 <FileText className="w-4 h-4 text-primary" />
                 מסמכים נדרשים להגשת התביעה
               </h4>
-
               <ul className="space-y-2">
                 {requiredDocs.map((doc, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">

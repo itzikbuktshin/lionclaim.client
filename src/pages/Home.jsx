@@ -6,10 +6,10 @@ import ChatInput from "@/components/chat/ChatInput";
 import StepIndicator from "@/components/chat/StepIndicator";
 import ResultCard from "@/components/chat/ResultCard";
 import TypingIndicator from "@/components/chat/TypingIndicator";
-import { calculateCompensation, calculateDecline, getDamageCoefficient, formatCurrency } from "@/lib/compensationCalc";
+import { calculateCompensation, calculateDecline, formatCurrency } from "@/lib/compensationCalc";
 import { base44 } from "@/api/base44Client";
 
-const INITIAL_MESSAGE = "שלום! 👋\nאני הסוכן לבדיקת זכאות לפיצויים עקיפים במסלול \"שאגת הארי\".\nאעזור לך לבדוק אם העסק שלך זכאי לפיצוי ומה הסכום המשוער.\n\nנתחיל?";
+const INITIAL_MESSAGE = "שלום! 👋\nאני הסוכן לבדיקת זכאות לפיצויים עקיפים במסלול \"שאגת הארי\".\nאעזור לך לבדוק אם העסק שלך זכאי לפיצוי ומה הסכום החודשי המשוער.\n\nהמסלול מיועד לעסקים עם מחזור שנתי של 300,000 ₪ ומעלה.\n\nנתחיל?";
 
 export default function Home() {
   const [messages, setMessages] = useState([
@@ -65,7 +65,7 @@ export default function Home() {
         } else {
           addMessages(
             "לא, העסק לא היה פעיל",
-            "לצערי, רק עסקים שהיו פעילים בשנת 2025 זכאים לפיצוי במסלול זה. 😔\nאם יש לך שאלות נוספות, אתה מוזמן להתחיל שיחה חדשה.",
+            "לצערי, רק עסקים שהיו פעילים לפני סוף פברואר 2026 זכאים לפיצוי במסלול זה. 😔\nאם יש לך שאלות נוספות, אתה מוזמן להתחיל שיחה חדשה.",
             "done", 0, { businessActive: false }
           );
         }
@@ -76,7 +76,7 @@ export default function Home() {
         if (!value) return;
         addMessages(
           value,
-          "מהן ההכנסות ברוטו השנתיות של העסק בשנת 2025? (בשקלים)",
+          "מהו המחזור השנתי של העסק בשנת 2025? (בשקלים)\nלדוגמה: 500000",
           "annual_revenue", 3, { businessType: value }
         );
         break;
@@ -85,21 +85,19 @@ export default function Home() {
       case "annual_revenue": {
         const num = parseFloat(value.replace(/,/g, ""));
         if (isNaN(num) || num <= 0) {
-          setMessages(prev => [...prev, 
-            { text: value, isAgent: false },
-          ]);
+          setMessages(prev => [...prev, { text: value, isAgent: false }]);
           setIsTyping(true);
           setTimeout(() => {
             setIsTyping(false);
-            setMessages(prev => [...prev, 
-              { text: "אנא הזן מספר תקין (למשל: 120000)", isAgent: true }
+            setMessages(prev => [...prev,
+              { text: "אנא הזן מספר תקין (למשל: 500000)", isAgent: true }
             ]);
           }, 400);
           return;
         }
         addMessages(
           `${formatCurrency(num)} ₪`,
-          `תודה. כעת אני צריך את הכנסות תקופת הבסיס.\nמהן ההכנסות ברוטו שלך בתקופה מרץ-אפריל 2025? (בשקלים)`,
+          "מהן ההכנסות ברוטו בתקופת הבסיס — מרץ-אפריל 2025? (בשקלים)",
           "base_revenue", 4, { annualRevenue: num }
         );
         break;
@@ -112,15 +110,15 @@ export default function Home() {
           setIsTyping(true);
           setTimeout(() => {
             setIsTyping(false);
-            setMessages(prev => [...prev, 
-              { text: "אנא הזן מספר תקין (למשל: 30000)", isAgent: true }
+            setMessages(prev => [...prev,
+              { text: "אנא הזן מספר תקין (למשל: 80000)", isAgent: true }
             ]);
           }, 400);
           return;
         }
         addMessages(
           `${formatCurrency(num)} ₪`,
-          "ומהן ההכנסות ברוטו בתקופת הפיצוי (התקופה המקבילה בזמן הנזק)? (בשקלים)",
+          "מהן ההכנסות ברוטו בתקופת הפיצוי — מרץ-אפריל 2026? (בשקלים)\nניתן להזין 0.",
           "compensation_revenue", 5, { baseRevenue: num }
         );
         break;
@@ -133,24 +131,65 @@ export default function Home() {
           setIsTyping(true);
           setTimeout(() => {
             setIsTyping(false);
-            setMessages(prev => [...prev, 
-              { text: "אנא הזן מספר תקין (למשל: 15000). ניתן להזין 0.", isAgent: true }
+            setMessages(prev => [...prev,
+              { text: "אנא הזן מספר תקין (למשל: 40000). ניתן להזין 0.", isAgent: true }
+            ]);
+          }, 400);
+          return;
+        }
+        addMessages(
+          `${formatCurrency(num)} ₪`,
+          "מה הממוצע החודשי של ההוצאות הקבועות של העסק (שכירות, חשמל, ביטוחים וכו׳)? (בשקלים)",
+          "monthly_expenses", 6, { compensationRevenue: num }
+        );
+        break;
+      }
+
+      case "monthly_expenses": {
+        const num = parseFloat(value.replace(/,/g, ""));
+        if (isNaN(num) || num < 0) {
+          setMessages(prev => [...prev, { text: value, isAgent: false }]);
+          setIsTyping(true);
+          setTimeout(() => {
+            setIsTyping(false);
+            setMessages(prev => [...prev,
+              { text: "אנא הזן מספר תקין (למשל: 20000). ניתן להזין 0.", isAgent: true }
+            ]);
+          }, 400);
+          return;
+        }
+        addMessages(
+          `${formatCurrency(num)} ₪`,
+          "מה עלות השכר החודשית הכוללת של העסק (כולל עלות מעביד)? (בשקלים)\nאם אין עובדים, הזן 0.",
+          "monthly_salary", 7, { monthlyExpenses: num }
+        );
+        break;
+      }
+
+      case "monthly_salary": {
+        const num = parseFloat(value.replace(/,/g, ""));
+        if (isNaN(num) || num < 0) {
+          setMessages(prev => [...prev, { text: value, isAgent: false }]);
+          setIsTyping(true);
+          setTimeout(() => {
+            setIsTyping(false);
+            setMessages(prev => [...prev,
+              { text: "אנא הזן מספר תקין (למשל: 50000). ניתן להזין 0.", isAgent: true }
             ]);
           }, 400);
           return;
         }
 
-        const updatedData = { ...data, compensationRevenue: num };
-        const declinePercent = calculateDecline(updatedData.baseRevenue, num);
-        const compensation = calculateCompensation(updatedData.annualRevenue, declinePercent);
-        const coefficient = getDamageCoefficient(declinePercent);
+        const updatedData = { ...data, monthlySalary: num };
+        const declinePercent = calculateDecline(updatedData.baseRevenue, updatedData.compensationRevenue);
+        const compensation = calculateCompensation(declinePercent, updatedData.monthlyExpenses, num);
 
         const resultData = {
           eligible: compensation.eligible,
           declinePercent,
-          coefficient,
-          amount: compensation.amount,
-          tier: compensation.tier,
+          fixedCostsAmount: compensation.fixedCostsAmount,
+          salaryAmount: compensation.salaryAmount,
+          totalAmount: compensation.totalAmount,
           annualRevenue: updatedData.annualRevenue,
           businessType: updatedData.businessType,
         };
@@ -160,7 +199,7 @@ export default function Home() {
 
         setTimeout(async () => {
           setIsTyping(false);
-          setMessages(prev => [...prev, 
+          setMessages(prev => [...prev,
             { text: "מחשב את הזכאות שלך... 📊", isAgent: true }
           ]);
 
@@ -169,12 +208,10 @@ export default function Home() {
             business_type: updatedData.businessType,
             annual_revenue: updatedData.annualRevenue,
             base_revenue: updatedData.baseRevenue,
-            compensation_revenue: num,
+            compensation_revenue: updatedData.compensationRevenue,
             decline_percent: declinePercent,
-            damage_coefficient: coefficient,
             eligible: compensation.eligible,
-            compensation_amount: compensation.amount,
-            compensation_tier: compensation.tier || null,
+            compensation_amount: compensation.totalAmount,
           }).then(record => {
             if (record?.id) setSavedCheckId(record.id);
           });
@@ -182,7 +219,7 @@ export default function Home() {
           setTimeout(() => {
             setResult(resultData);
             setStep("result");
-            setStepIndex(6);
+            setStepIndex(8);
           }, 800);
         }, 600);
         break;
@@ -228,11 +265,15 @@ export default function Home() {
           { label: "שותפות", value: "שותפות" }
         ]};
       case "annual_revenue":
-        return { placeholder: "למשל: 120000", type: "text" };
+        return { placeholder: "למשל: 500000", type: "text" };
       case "base_revenue":
         return { placeholder: "הכנסות מרץ-אפריל 2025", type: "text" };
       case "compensation_revenue":
-        return { placeholder: "הכנסות תקופת הפיצוי", type: "text" };
+        return { placeholder: "הכנסות מרץ-אפריל 2026", type: "text" };
+      case "monthly_expenses":
+        return { placeholder: "הוצאות קבועות חודשיות (₪)", type: "text" };
+      case "monthly_salary":
+        return { placeholder: "עלות שכר חודשית (₪)", type: "text" };
       default:
         return null;
     }
