@@ -1,13 +1,15 @@
-import React from "react";
+import React, { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { 
   CheckCircle, XCircle, TrendingDown, Calculator, 
-  FileText, AlertTriangle, Award 
+  FileText, AlertTriangle, Award, Download, Loader2
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { formatCurrency, getDamageCoefficientLabel } from "@/lib/compensationCalc";
+import jsPDF from "jspdf";
 
 function ResultRow({ icon: Icon, label, value, highlight }) {
   return (
@@ -25,6 +27,111 @@ function ResultRow({ icon: Icon, label, value, highlight }) {
 
 export default function ResultCard({ result }) {
   const { eligible, declinePercent, coefficient, amount, tier, annualRevenue, businessType } = result;
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportPDF = () => {
+    setExporting(true);
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+    // RTL support via mirroring layout manually
+    const pageW = 210;
+    const margin = 20;
+    const contentW = pageW - margin * 2;
+    let y = 20;
+
+    const rtlText = (text, x, yPos, opts = {}) => {
+      doc.text(text, x, yPos, { align: "right", ...opts });
+    };
+
+    // Header background
+    doc.setFillColor(eligible ? 28 : 220, eligible ? 56 : 38, eligible ? 100 : 38);
+    doc.roundedRect(margin, y, contentW, 28, 3, 3, "F");
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    rtlText(eligible ? "נמצאה זכאות לפיצוי" : "לא נמצאה זכאות", margin + contentW, y + 10);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    rtlText("מסלול שאגת הארי — פיצויים עקיפים לעסקים", margin + contentW, y + 18);
+    rtlText(`תאריך הפקה: ${new Date().toLocaleDateString("he-IL")}`, margin + contentW, y + 24);
+
+    y += 36;
+    doc.setTextColor(30, 30, 30);
+
+    const drawRow = (label, value, highlight = false) => {
+      doc.setFillColor(highlight ? 250 : 248, highlight ? 245 : 248, highlight ? 230 : 250);
+      doc.roundedRect(margin, y, contentW, 10, 2, 2, "F");
+      doc.setFontSize(10);
+      doc.setFont("helvetica", highlight ? "bold" : "normal");
+      doc.setTextColor(highlight ? 180 : 80, highlight ? 120 : 80, highlight ? 0 : 80);
+      rtlText(label, margin + contentW - 3, y + 6.5);
+      doc.setTextColor(highlight ? 20 : 30, 30, 30);
+      doc.setFont("helvetica", "bold");
+      doc.text(value, margin + 3, y + 6.5);
+      y += 13;
+    };
+
+    drawRow("סוג עסק", businessType);
+    drawRow("הכנסות שנתיות (2025)", `${formatCurrency(annualRevenue)} ILS`);
+    drawRow("שיעור ירידת הכנסות", `${declinePercent}%`);
+
+    if (eligible) {
+      drawRow("טווח נזק", getDamageCoefficientLabel(declinePercent));
+      drawRow("מקדם נזק", `x${coefficient}`);
+      drawRow("מדרגת פיצוי", tier);
+      drawRow("סכום פיצוי משוער", `${formatCurrency(amount)} ILS`, true);
+    } else {
+      y += 4;
+      doc.setFillColor(255, 230, 230);
+      doc.roundedRect(margin, y, contentW, 14, 2, 2, "F");
+      doc.setTextColor(180, 30, 30);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      rtlText(`שיעור ירידת ההכנסות (${declinePercent}%) נמוך מ-25% — הסף המינימלי לזכאות.`, margin + contentW - 3, y + 9);
+      y += 18;
+    }
+
+    if (eligible) {
+      y += 6;
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 30, 30);
+      rtlText("מסמכים נדרשים להגשת התביעה", margin + contentW, y);
+      y += 8;
+
+      const docs = [
+        "דוחות כספיים / רווח והפסד לשנת 2025",
+        'דוחות מע"מ לתקופת הבסיס (מרץ-אפריל 2025)',
+        "דוחות מע\"מ לתקופת הפיצוי",
+        "אישור ניהול חשבון בנק",
+        "צילום תעודת זהות של בעל העסק",
+        "אישור רואה חשבון / יועץ מס"
+      ];
+
+      docs.forEach((d, i) => {
+        doc.setFillColor(245, 247, 252);
+        doc.roundedRect(margin, y, contentW, 9, 2, 2, "F");
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(60, 60, 60);
+        rtlText(d, margin + contentW - 3, y + 6);
+        doc.setTextColor(28, 56, 100);
+        doc.setFont("helvetica", "bold");
+        doc.text(`${i + 1}.`, margin + 6, y + 6);
+        y += 12;
+      });
+    }
+
+    // Footer
+    doc.setFontSize(8);
+    doc.setTextColor(160, 160, 160);
+    doc.setFont("helvetica", "normal");
+    rtlText("* דוח זה הינו אינדיקציה בלבד ואינו מהווה אישור רשמי לזכאות", pageW - margin, 285);
+
+    doc.save(`שאגת-הארי-בדיקת-זכאות-${new Date().toLocaleDateString("he-IL").replace(/\//g, "-")}.pdf`);
+    setExporting(false);
+  };
 
   const requiredDocs = [
     "דוחות כספיים / רווח והפסד לשנת 2025",
@@ -105,6 +212,7 @@ export default function ResultCard({ result }) {
                 <FileText className="w-4 h-4 text-primary" />
                 מסמכים נדרשים להגשת התביעה
               </h4>
+
               <ul className="space-y-2">
                 {requiredDocs.map((doc, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -117,6 +225,20 @@ export default function ResultCard({ result }) {
               </ul>
             </div>
           )}
+          <div className="mt-6 pt-4 border-t border-border">
+            <Button
+              onClick={handleExportPDF}
+              disabled={exporting}
+              className="w-full rounded-xl gap-2 bg-primary hover:bg-primary/90"
+            >
+              {exporting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              ייצוא דוח PDF
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </motion.div>
