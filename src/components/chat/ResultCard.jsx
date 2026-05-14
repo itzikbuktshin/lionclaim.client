@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, getDeclineRangeLabel, getFixedCostsCoefficient } from "@/lib/compensationCalc";
+import { formatCurrency, getDeclineRangeLabel } from "@/lib/compensationCalc";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 

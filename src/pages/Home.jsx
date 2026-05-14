@@ -7,8 +7,8 @@ import StepIndicator from "@/components/chat/StepIndicator";
 import ResultCard from "@/components/chat/ResultCard";
 import TypingIndicator from "@/components/chat/TypingIndicator";
 import {
-  calculateFullCompensation, calculateDecline,
-  formatCurrency, STEPS_FULL, STEPS_MID, STEPS_SHORT,
+  calculateFullCompensation,
+  formatCurrency, STEPS_MID, STEPS_SHORT,
   MIN_ANNUAL_REVENUE, MID_RANGE_THRESHOLD
 } from "@/lib/compensationCalc";
 import { base44 } from "@/api/base44Client";
