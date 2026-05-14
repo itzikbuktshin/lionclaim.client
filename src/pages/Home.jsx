@@ -283,7 +283,7 @@ export default function Home() {
   const inputConfig = getInputConfig();
 
   return (
-    <div className="h-screen bg-background flex flex-col overflow-hidden" dir="rtl">
+    <div className="h-[100dvh] bg-background flex flex-col overflow-hidden" dir="rtl">
       {/* Header */}
       <header className="bg-primary text-primary-foreground flex-shrink-0">
         <div className="max-w-2xl mx-auto px-4 py-5 flex items-center justify-between">
@@ -347,7 +347,7 @@ export default function Home() {
 
         {/* Input Area */}
         {inputConfig && !result && (
-          <div className="flex-shrink-0 border-t border-border bg-background">
+          <div className="flex-shrink-0 border-t border-border bg-background" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
             {step === "welcome" ? (
               <div className="p-4 flex justify-center">
                 <button
