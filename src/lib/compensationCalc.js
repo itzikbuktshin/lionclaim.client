@@ -146,7 +146,7 @@ export function calculateFullCompensation(input) {
   // ── SMALL BUSINESS (< 300,000) ────────────────────────────────────────────
   if (annualRevenue2025 < MID_RANGE_THRESHOLD) {
     const baseAmount = getMidRangeBaseCompensation(annualRevenue2025);
-    const coeff = getDamageCoefficient(declinePercent);
+    const coeff = annualRevenue2025 <= 120000 ? 1 : getDamageCoefficient(declinePercent);
     const compensationAmount = Math.round(baseAmount * coeff);
 
     return {
@@ -240,8 +240,13 @@ export function calculateCompensation(declinePercent, annualExpenses2025, grossS
 }
 
 export function calculateMidRangeCompensation(annualRevenue, declinePercent) {
-  const coeff = getDamageCoefficient(declinePercent);
-  if (coeff === 0) return { eligible: false, baseAmount: 0, damageCoefficient: 0, totalAmount: 0 };
+  if (declinePercent < 25) return { 
+    eligible: false, 
+    baseAmount: 0, 
+    damageCoefficient: 0, 
+    totalAmount: 0 
+  };
+  const coeff = annualRevenue <= 120000 ? 1 : getDamageCoefficient(declinePercent);
   const base = getMidRangeBaseCompensation(annualRevenue);
   return {
     eligible: true,
