@@ -179,7 +179,7 @@ export default function Home() {
         }
 
         addMessages(`${formatCurrency(num)} ₪`,
-          "מה הממוצע החודשי של הוצאות העסק בשנת 2025? (שכירות, חשמל, ביטוחים וכו׳)\nבשקלים — למשל: 20000",
+          "מה סך ההוצאות השנתיות של העסק בשנת 2025? (שכירות, חשמל, ביטוחים וכו׳)\nבשקלים — למשל: 240000",
           "monthly_expenses", 6, { compensationRevenue: num }
         );
         break;
@@ -190,12 +190,12 @@ export default function Home() {
         if (isNaN(num) || num < 0) {
           setMessages(prev => [...prev, { text: value, isAgent: false }]);
           setIsTyping(true);
-          setTimeout(() => { setIsTyping(false); setMessages(prev => [...prev, { text: "אנא הזן מספר תקין (למשל: 20000). ניתן להזין 0.", isAgent: true }]); }, 400);
+          setTimeout(() => { setIsTyping(false); setMessages(prev => [...prev, { text: "אנא הזן מספר תקין (למשל: 240000). ניתן להזין 0.", isAgent: true }]); }, 400);
           return;
         }
         addMessages(`${formatCurrency(num)} ₪`,
           "מה שכר הברוטו הכולל של העובדים בחודש מרץ 2026? (בשקלים)\nתקרת החישוב לעובד: 13,769 ₪. אם אין עובדים, הזן 0.\nאין לכלול עובדים בחופשה / מילואים / חל\"ת.",
-          "monthly_salary", 7, { monthlyExpenses: num }
+          "monthly_salary", 7, { monthlyExpenses: num / 12 }
         );
         break;
       }
@@ -271,7 +271,7 @@ export default function Home() {
       case "annual_revenue":      return { placeholder: "למשל: 500000", type: "text" };
       case "base_revenue":        return { placeholder: "הכנסות מרץ-אפריל 2025 (₪)", type: "text" };
       case "compensation_revenue":return { placeholder: "הכנסות מרץ-אפריל 2026 (₪)", type: "text" };
-      case "monthly_expenses":    return { placeholder: "ממוצע הוצאות חודשיות 2025 (₪)", type: "text" };
+      case "monthly_expenses":    return { placeholder: "סך הוצאות שנתיות 2025 (₪)", type: "text" };
       case "monthly_salary":      return { placeholder: "שכר ברוטו כולל מרץ 2026 (₪)", type: "text" };
       case "direct_damage":
         return { options: [{ label: "כן, יש נזק ישיר 🏚️", value: "yes" }, { label: "לא, אין נזק ישיר", value: "no" }] };
