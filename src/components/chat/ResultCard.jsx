@@ -52,15 +52,37 @@ export default function ResultCard({ result }) {
     if (!cardRef.current) return;
     setExporting(true);
     try {
-      const canvas = await html2canvas(cardRef.current, {
+      const el = cardRef.current;
+      const fullH = el.scrollHeight;
+      const fullW = el.scrollWidth;
+      const canvas = await html2canvas(el, {
         scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false,
+        scrollX: 0, scrollY: 0,
+        width: fullW, height: fullH,
+        windowWidth: fullW, windowHeight: fullH,
       });
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const pageW = 210, pageH = 297, margin = 10, maxW = pageW - margin * 2;
       const imgH = (canvas.height * maxW) / canvas.width;
-      const yPos = imgH < pageH - margin * 2 ? (pageH - imgH) / 2 : margin;
-      pdf.addImage(imgData, "PNG", margin, yPos, maxW, imgH);
+      // split across pages if content is taller than one page
+      const usableH = pageH - margin * 2;
+      if (imgH <= usableH) {
+        pdf.addImage(imgData, "PNG", margin, (pageH - imgH) / 2, maxW, imgH);
+      } else {
+        const pageImgH = (usableH * canvas.width) / maxW;
+        let srcY = 0;
+        while (srcY < canvas.height) {
+          const sliceH = Math.min(pageImgH, canvas.height - srcY);
+          const sliceCanvas = document.createElement("canvas");
+          sliceCanvas.width = canvas.width;
+          sliceCanvas.height = sliceH;
+          sliceCanvas.getContext("2d").drawImage(canvas, 0, srcY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+          pdf.addImage(sliceCanvas.toDataURL("image/png"), "PNG", margin, margin, maxW, (sliceH * maxW) / canvas.width);
+          srcY += sliceH;
+          if (srcY < canvas.height) pdf.addPage();
+        }
+      }
       pdf.save(`שאגת-הארי-${new Date().toLocaleDateString("he-IL").replace(/\//g, "-")}.pdf`);
     } finally {
       setExporting(false);
