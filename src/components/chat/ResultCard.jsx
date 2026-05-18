@@ -15,13 +15,13 @@ import html2canvas from "html2canvas";
 function ResultRow({ icon: Icon, label, value, highlight }) {
   return (
     <div className="flex items-center justify-between py-3">
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Icon className="w-4 h-4" />
+        <span className="text-sm font-medium">{label}</span>
+      </div>
       <span className={`text-lg font-bold ${highlight ? "text-secondary" : "text-foreground"}`}>
         {value}
       </span>
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <span className="text-sm font-medium">{label}</span>
-        <Icon className="w-4 h-4" />
-      </div>
     </div>
   );
 }
