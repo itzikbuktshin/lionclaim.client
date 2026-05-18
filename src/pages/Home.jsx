@@ -25,7 +25,6 @@ const STEPS_LARGE = [
   { id: "compensation_revenue", label: "הכנסות פיצוי" },
   { id: "monthly_expenses",     label: "הוצאות חודשיות" },
   { id: "monthly_salary",       label: "עלות שכר" },
-  { id: "direct_damage",        label: "נזק ישיר" },
   { id: "result",               label: "תוצאה" },
 ];
 
@@ -69,7 +68,6 @@ export default function Home() {
       revenueMarchApril2026: finalData.compensationRevenue,
       grossSalaryMarch2026: finalData.grossSalary,
       fixedExpensesActual: finalData.fixedExpensesActual,
-      hasDirectDamage: finalData.hasDirectDamage,
     });
 
     setMessages(prev => [...prev, { text: "מחשב את הזכאות שלך... 📊", isAgent: true }]);
@@ -209,22 +207,12 @@ export default function Home() {
           setTimeout(() => { setIsTyping(false); setMessages(prev => [...prev, { text: "אנא הזן מספר תקין (למשל: 50000). ניתן להזין 0.", isAgent: true }]); }, 400);
           return;
         }
-        addMessages(`${formatCurrency(num)} ₪`,
-          "האם בית העסק שלך ספג נזק ישיר (פיזי) כתוצאה מהמלחמה?",
-          "direct_damage", 8, { grossSalary: num }
-        );
-        break;
-      }
-
-      case "direct_damage": {
-        const hasDirectDamage = value === "yes";
-        const userLabel = hasDirectDamage ? "כן, יש נזק ישיר" : "לא, אין נזק ישיר";
-        setMessages(prev => [...prev, { text: userLabel, isAgent: false }]);
+        setMessages(prev => [...prev, { text: `${formatCurrency(num)} ₪`, isAgent: false }]);
         setIsTyping(true);
         setTimeout(() => {
           setIsTyping(false);
           setMessages(prev => [...prev, { text: "מחשב את הזכאות שלך... 📊", isAgent: true }]);
-          const updatedData = { ...data, hasDirectDamage };
+          const updatedData = { ...data, grossSalary: num };
           setData(updatedData);
           finishAndCalc(updatedData);
         }, 600);
@@ -274,8 +262,7 @@ export default function Home() {
       case "compensation_revenue":return { placeholder: "הכנסות מרץ-אפריל 2026 (₪)", type: "text" };
       case "monthly_expenses":    return { placeholder: "סך הוצאות שנתיות 2025 (₪)", type: "text" };
       case "monthly_salary":      return { placeholder: "שכר ברוטו כולל מרץ 2026 (₪)", type: "text" };
-      case "direct_damage":
-        return { options: [{ label: "כן, יש נזק ישיר 🏚️", value: "yes" }, { label: "לא, אין נזק ישיר", value: "no" }] };
+
       default:
         return null;
     }

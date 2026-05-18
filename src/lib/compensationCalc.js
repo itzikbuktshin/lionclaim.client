@@ -113,7 +113,6 @@ export function getDamageCoefficient(declinePercent) {
  * @param {number}  input.revenueMarchApril2026
  * @param {number}  input.grossSalaryMarch2026
  * @param {number}  [input.fixedExpensesActual]     - אופציונלי
- * @param {boolean} [input.hasDirectDamage]
  */
 export function calculateFullCompensation(input) {
   const {
@@ -124,7 +123,6 @@ export function calculateFullCompensation(input) {
     revenueMarchApril2026,
     grossSalaryMarch2026,
     fixedExpensesActual,
-    hasDirectDamage,
   } = input;
 
   const notes = [];
@@ -200,15 +198,7 @@ export function calculateFullCompensation(input) {
     notes.push("הפיצוי חושב לפי נוסחת עסק קטן (הניבה תוצאה גבוהה יותר)");
   }
 
-  // Additional: direct damage for sole proprietors
-  let additionalDirectDamage = 0;
-  if (hasDirectDamage && businessType === "עוסק יחיד") {
-    const additional = Math.min((annualRevenue2025 / 6) * (declinePercent / 100), 30000);
-    additionalDirectDamage = Math.round(additional);
-    notes.push(`נוסף פיצוי נזק ישיר לעוסק יחיד: ${formatCurrency(additionalDirectDamage)} ₪`);
-  }
-
-  const finalCompensation = Math.round(compensationAmount + additionalDirectDamage);
+  const finalCompensation = Math.round(compensationAmount);
 
   return {
     eligible: true,
@@ -220,7 +210,7 @@ export function calculateFullCompensation(input) {
     subtotalBeforeCap: Math.round(subtotalBeforeCap),
     monthlyCapApplied: Math.round(monthlyCapApplied),
     compensationAmount: Math.round(compensationAmount),
-    additionalDirectDamage,
+    additionalDirectDamage: 0,
     finalCompensation,
     notes,
   };

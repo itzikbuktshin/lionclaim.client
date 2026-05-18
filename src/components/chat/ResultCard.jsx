@@ -156,13 +156,6 @@ export default function ResultCard({ result }) {
                     <Separator />
                   </>
                 )}
-                <ResultRow icon={CheckCircle} label="פיצוי חודשי (לפני נזק ישיר)" value={`${formatCurrency(compensationAmount)} ₪`} />
-                {additionalDirectDamage > 0 && (
-                  <>
-                    <Separator />
-                    <ResultRow icon={DollarSign} label="תוספת נזק ישיר" value={`${formatCurrency(additionalDirectDamage)} ₪`} />
-                  </>
-                )}
                 <Separator />
                 <ResultRow icon={CheckCircle} label="סך פיצוי חודשי משוער" value={`${formatCurrency(finalCompensation)} ₪`} highlight />
               </>
