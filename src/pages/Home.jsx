@@ -84,6 +84,7 @@ export default function Home() {
       decline_percent: calc.declinePercent,
       eligible: calc.eligible,
       compensation_amount: calc.finalCompensation || calc.compensationAmount || 0,
+      createdAt: new Date().toISOString(),
     }).then(record => { if (record?.id) setSavedCheckId(record.id); });
 
     setTimeout(() => {
