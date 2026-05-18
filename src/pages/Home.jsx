@@ -343,7 +343,7 @@ export default function Home() {
                   className="w-full max-w-xs rounded-2xl px-8 py-4 text-base font-bold text-primary-foreground shadow-lg transition-all duration-200 active:scale-95 hover:brightness-110"
                   style={{ background: "linear-gradient(135deg, hsl(42,87%,50%) 0%, hsl(30,90%,55%) 100%)" }}
                 >
-                  🦁 התחל עכשיו
+                   התחל עכשיו
                 </button>
               </div>
             ) : inputConfig.options ? (
