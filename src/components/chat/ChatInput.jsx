@@ -27,7 +27,7 @@ export default function ChatInput({ onSend, placeholder, disabled, type = "text"
             key={opt.value}
             variant="outline"
             onClick={() => onSend(opt.value)}
-            className="rounded-full border-primary/30 hover:bg-primary hover:text-primary-foreground transition-all duration-200"
+            className="rounded-full border-primary/30 hover:bg-primary hover:text-primary-foreground transition-all duration-200 h-11 px-5 text-sm font-medium"
           >
             {opt.label}
           </Button>
@@ -42,7 +42,7 @@ export default function ChatInput({ onSend, placeholder, disabled, type = "text"
         onClick={handleSend}
         disabled={disabled || !value.trim()}
         size="icon"
-        className="rounded-full flex-shrink-0 bg-primary hover:bg-primary/90"
+        className="rounded-full flex-shrink-0 bg-primary hover:bg-primary/90 w-11 h-11"
       >
         <Send className="w-4 h-4" />
       </Button>
@@ -53,7 +53,8 @@ export default function ChatInput({ onSend, placeholder, disabled, type = "text"
         placeholder={placeholder || "הקלד כאן..."}
         disabled={disabled}
         type={type}
-        className="rounded-full text-right bg-background"
+        inputMode="numeric"
+        className="rounded-full text-right bg-background h-11 text-base"
         dir="rtl"
       />
     </div>

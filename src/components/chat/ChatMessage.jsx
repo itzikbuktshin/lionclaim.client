@@ -17,12 +17,12 @@ export default function ChatMessage({ message, isAgent }) {
       }`}>
         {isAgent ? <Bot className="w-5 h-5" /> : <User className="w-5 h-5" />}
       </div>
-      <div className={`max-w-[80%] rounded-2xl px-5 py-3 ${
+      <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${
         isAgent 
           ? "bg-card border border-border shadow-sm" 
           : "bg-primary text-primary-foreground"
       }`}>
-        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message}</p>
+        <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap">{message}</p>
       </div>
     </motion.div>
   );

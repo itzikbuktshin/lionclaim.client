@@ -257,11 +257,11 @@ export default function Home() {
           { label: "חברה בע\"מ", value: "חברה בע\"מ" },
           { label: "שותפות", value: "שותפות" },
         ]};
-      case "annual_revenue":      return { placeholder: "למשל: 500000", type: "text" };
-      case "base_revenue":        return { placeholder: "הכנסות מרץ-אפריל 2025 (₪)", type: "text" };
-      case "compensation_revenue":return { placeholder: "הכנסות מרץ-אפריל 2026 (₪)", type: "text" };
-      case "monthly_expenses":    return { placeholder: "סך הוצאות שנתיות 2025 (₪)", type: "text" };
-      case "monthly_salary":      return { placeholder: "שכר ברוטו כולל מרץ 2026 (₪)", type: "text" };
+      case "annual_revenue":      return { placeholder: "למשל: 500000", type: "tel" };
+      case "base_revenue":        return { placeholder: "הכנסות מרץ-אפריל 2025 (₪)", type: "tel" };
+      case "compensation_revenue":return { placeholder: "הכנסות מרץ-אפריל 2026 (₪)", type: "tel" };
+      case "monthly_expenses":    return { placeholder: "סך הוצאות שנתיות 2025 (₪)", type: "tel" };
+      case "monthly_salary":      return { placeholder: "שכר ברוטו כולל מרץ 2026 (₪)", type: "tel" };
 
       default:
         return null;
@@ -301,7 +301,7 @@ export default function Home() {
       {showPrivacyBanner && (
         <div className="bg-accent border-b border-border flex-shrink-0">
           <div className="max-w-2xl mx-auto px-4 py-2 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
               <Info className="w-3.5 h-3.5 flex-shrink-0 text-primary/60" />
               <span>החישובים בלבד נשמרים לצורך מחקר — ללא פרטים מזהים</span>
             </div>
@@ -340,7 +340,7 @@ export default function Home() {
               <div className="p-4 flex justify-center">
                 <button
                   onClick={() => handleSend("start")}
-                  className="w-full max-w-xs rounded-2xl px-8 py-4 text-base font-bold text-primary-foreground shadow-lg transition-all duration-200 active:scale-95 hover:brightness-110"
+                  className="w-full max-w-sm rounded-2xl px-8 py-5 text-lg font-bold text-primary-foreground shadow-lg transition-all duration-200 active:scale-95 hover:brightness-110"
                   style={{ background: "linear-gradient(135deg, hsl(42,87%,50%) 0%, hsl(30,90%,55%) 100%)" }}
                 >
                    התחל עכשיו
